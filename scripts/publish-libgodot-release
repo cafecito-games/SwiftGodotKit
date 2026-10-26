@@ -30,11 +30,16 @@ for file in "$mac_zip" "$ios_zip" "$provenance_file" "$package_file"; do
 done
 
 scripts/verify-custom-godot-sdk "$sdk_dir" "$sdk_lock"
+locked_repository=$(jq -er '.repository' "$sdk_lock")
 godot_sha=$(jq -er '.godotCommit' "$sdk_lock")
 custom_godot_sha=$(jq -er '.customGodotCommit' "$sdk_lock")
 custom_godot_tag=$(jq -er '.tag' "$sdk_lock")
 custom_godot_asset=$(jq -er '.asset' "$sdk_lock")
 custom_godot_asset_sha=$(jq -er '.sha256' "$sdk_lock")
+if [[ "$godot_repo" != "$locked_repository" ]]; then
+    echo "Godot repository $godot_repo does not match SDK lock $locked_repository" >&2
+    exit 1
+fi
 gh api "repos/$godot_repo/commits/$custom_godot_sha" --jq .sha >/dev/null
 mac_checksum=$(swift package compute-checksum "$mac_zip")
 ios_checksum=$(swift package compute-checksum "$ios_zip")
@@ -109,9 +114,20 @@ if [[ ${PUBLISH_DRY_RUN:-0} == 1 ]]; then
     exit 0
 fi
 
-if gh release view "$tag" --repo "$release_repo" >/dev/null 2>&1 ||
-    git ls-remote --exit-code --tags "https://github.com/$release_repo.git" "refs/tags/$tag" >/dev/null 2>&1; then
-    echo "Release or tag already exists: $release_repo@$tag" >&2
+if gh release view "$tag" --repo "$release_repo" >/dev/null 2>&1; then
+    existing_mac_digest=$(gh release view "$tag" --repo "$release_repo" --json assets --jq '.assets[] | select(.name == "libgodot-macos.xcframework.zip") | .digest')
+    existing_ios_digest=$(gh release view "$tag" --repo "$release_repo" --json assets --jq '.assets[] | select(.name == "libgodot-ios.xcframework.zip") | .digest')
+    existing_asset_count=$(gh release view "$tag" --repo "$release_repo" --json assets --jq '[.assets[] | select(.name == "libgodot-macos.xcframework.zip" or .name == "libgodot-ios.xcframework.zip")] | length')
+    if [[ "$existing_asset_count" != 2 || "$existing_mac_digest" != "sha256:$mac_checksum" || "$existing_ios_digest" != "sha256:$ios_checksum" ]]; then
+        echo "Existing release assets differ from the requested payload: $release_repo@$tag" >&2
+        exit 1
+    fi
+    cat "$manifest_candidate" > "$package_file"
+    echo "Verified existing identical release and updated $package_file."
+    exit 0
+fi
+if git ls-remote --exit-code --tags "https://github.com/$release_repo.git" "refs/tags/$tag" >/dev/null 2>&1; then
+    echo "Tag exists without a matching release: $release_repo@$tag" >&2
     exit 1
 fi
 

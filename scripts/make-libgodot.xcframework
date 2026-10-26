@@ -270,6 +270,8 @@ replace_framework() {
 zip_payloads() {
     local mac_zip="$OUTPUT_DIR/mac/libgodot-macos.xcframework.zip"
     local ios_zip="$OUTPUT_DIR/ios/libgodot-ios.xcframework.zip"
+    local repository tag asset sdk_sha custom_godot_commit godot_commit
+    local mac_sha ios_sha provenance_tmp
 
     if [[ ! -d "$OUTPUT_DIR/mac/libgodot.xcframework" || ! -d "$OUTPUT_DIR/ios/libgodot.xcframework" ]]; then
         echo "error: cannot create zips until both xcframeworks exist" >&2
@@ -281,17 +283,27 @@ zip_payloads() {
     scripts/create-deterministic-zip "$OUTPUT_DIR/ios/libgodot.xcframework" "$ios_zip"
 
     if [[ "$INPUT_KIND" == "sdk" ]]; then
+        repository=$(jq -er '.repository' "$SDK_LOCK")
+        tag=$(jq -er '.tag' "$SDK_LOCK")
+        asset=$(jq -er '.asset' "$SDK_LOCK")
+        sdk_sha=$(jq -er '.sha256' "$SDK_LOCK")
+        custom_godot_commit=$(jq -er '.customGodotCommit' "$SDK_LOCK")
+        godot_commit=$(jq -er '.godotCommit' "$SDK_LOCK")
+        mac_sha=$(swift package compute-checksum "$mac_zip")
+        ios_sha=$(swift package compute-checksum "$ios_zip")
+        provenance_tmp=$(mktemp "$OUTPUT_DIR/.libgodot-payload-provenance.XXXXXX")
         jq -n \
-            --arg repository "$(jq -er '.repository' "$SDK_LOCK")" \
-            --arg tag "$(jq -er '.tag' "$SDK_LOCK")" \
-            --arg asset "$(jq -er '.asset' "$SDK_LOCK")" \
-            --arg sdkSha256 "$(jq -er '.sha256' "$SDK_LOCK")" \
-            --arg customGodotCommit "$(jq -er '.customGodotCommit' "$SDK_LOCK")" \
-            --arg godotCommit "$(jq -er '.godotCommit' "$SDK_LOCK")" \
-            --arg macSha256 "$(swift package compute-checksum "$mac_zip")" \
-            --arg iosSha256 "$(swift package compute-checksum "$ios_zip")" \
+            --arg repository "$repository" \
+            --arg tag "$tag" \
+            --arg asset "$asset" \
+            --arg sdkSha256 "$sdk_sha" \
+            --arg customGodotCommit "$custom_godot_commit" \
+            --arg godotCommit "$godot_commit" \
+            --arg macSha256 "$mac_sha" \
+            --arg iosSha256 "$ios_sha" \
             '{schemaVersion:1,inputKind:"locked-sdk",repository:$repository,tag:$tag,asset:$asset,sdkSha256:$sdkSha256,customGodotCommit:$customGodotCommit,godotCommit:$godotCommit,macSha256:$macSha256,iosSha256:$iosSha256}' \
-            > "$OUTPUT_DIR/libgodot-payload-provenance.json"
+            > "$provenance_tmp"
+        mv "$provenance_tmp" "$OUTPUT_DIR/libgodot-payload-provenance.json"
     else
         rm -f "$OUTPUT_DIR/libgodot-payload-provenance.json"
     fi
@@ -362,6 +374,10 @@ if [[ -f "$IOS_DEVICE_LIB" ]]; then
     fi
     if [[ -f "$IOS_SIM_X86_LIB" ]]; then
         verify_embeddable_ios_archive "$IOS_SIM_X86_LIB" x86_64
+    fi
+    if [[ ! -f "$IOS_SIM_ARM_LIB" && ! -f "$IOS_SIM_X86_LIB" ]]; then
+        echo "error: an iOS Simulator libgodot slice is required" >&2
+        exit 1
     fi
 
     IOS_DEVICE_DIR="$PACKAGING_TMP_DIR/ios-device"
