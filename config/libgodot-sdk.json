@@ -1,0 +1,9 @@
+{
+  "repository": "cafecito-games/custom-godot",
+  "tag": "v4.7.2-20261026.1",
+  "asset": "apple-libgodot-release.zip",
+  "sha256": "6b10472fb36dbdc59e8f40ed3ffc11999bb4b4c85852bbc37a7ff73a6710a89b",
+  "customGodotCommit": "8c7cff31a7cf9412447ee51ff9a6fde8137ae67f",
+  "godotCommit": "ed1daf0bf001b61586d9930840f2f1394092c079",
+  "godotVersion": "4.7.2.stable"
+}

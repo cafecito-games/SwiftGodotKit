@@ -2,13 +2,13 @@
 set -euo pipefail
 
 if [[ $# -ne 7 ]]; then
-    echo "usage: publish-libgodot-release TAG GODOT_DIR CUSTOM_GODOT_DIR OUTPUT_DIR PACKAGE_FILE RELEASE_REPO GODOT_REPO" >&2
+    echo "usage: publish-libgodot-release TAG SDK_DIR SDK_LOCK OUTPUT_DIR PACKAGE_FILE RELEASE_REPO GODOT_REPO" >&2
     exit 2
 fi
 
 tag=$1
-godot_dir=$(cd "$2" && pwd)
-custom_godot_dir=$(cd "$3" && pwd)
+sdk_dir=$(cd "$2" && pwd)
+sdk_lock=$(cd "$(dirname "$3")" && pwd)/$(basename "$3")
 output_dir=$(cd "$4" && pwd)
 package_file=$5
 release_repo=$6
@@ -28,8 +28,12 @@ for file in "$mac_zip" "$ios_zip" "$package_file"; do
     fi
 done
 
-godot_sha=$(git -C "$godot_dir" rev-parse HEAD)
-custom_godot_sha=$(git -C "$custom_godot_dir" rev-parse HEAD)
+scripts/verify-custom-godot-sdk "$sdk_dir" "$sdk_lock"
+godot_sha=$(jq -er '.godotCommit' "$sdk_lock")
+custom_godot_sha=$(jq -er '.customGodotCommit' "$sdk_lock")
+custom_godot_tag=$(jq -er '.tag' "$sdk_lock")
+custom_godot_asset=$(jq -er '.asset' "$sdk_lock")
+custom_godot_asset_sha=$(jq -er '.sha256' "$sdk_lock")
 gh api "repos/$godot_repo/commits/$custom_godot_sha" --jq .sha >/dev/null
 mac_checksum=$(swift package compute-checksum "$mac_zip")
 ios_checksum=$(swift package compute-checksum "$ios_zip")
@@ -38,16 +42,24 @@ ios_url="https://github.com/$release_repo/releases/download/$tag/libgodot-ios.xc
 
 echo "Godot commit: $godot_sha"
 echo "Custom Godot commit: $custom_godot_sha"
+echo "Custom Godot release: $custom_godot_tag/$custom_godot_asset ($custom_godot_asset_sha)"
 echo "macOS checksum: $mac_checksum"
 echo "iOS checksum: $ios_checksum"
 
 manifest_candidate=$(mktemp)
 temporary_notes=""
+release_created=0
 cleanup() {
+    exit_code=$?
+    trap - EXIT
+    if [[ $exit_code -ne 0 && $release_created == 1 ]]; then
+        gh release delete "$tag" --repo "$release_repo" --cleanup-tag --yes || true
+    fi
     rm -f "$manifest_candidate"
     if [[ -n $temporary_notes ]]; then
         rm -f "$temporary_notes"
     fi
+    exit "$exit_code"
 }
 trap cleanup EXIT
 
@@ -81,6 +93,12 @@ if [[ ${PUBLISH_DRY_RUN:-0} == 1 ]]; then
     exit 0
 fi
 
+if gh release view "$tag" --repo "$release_repo" >/dev/null 2>&1 ||
+    git ls-remote --exit-code --tags "https://github.com/$release_repo.git" "refs/tags/$tag" >/dev/null 2>&1; then
+    echo "Release or tag already exists: $release_repo@$tag" >&2
+    exit 1
+fi
+
 notes_file=${RELEASE_NOTES_FILE:-}
 if [[ -z $notes_file ]]; then
     temporary_notes=$(mktemp)
@@ -88,6 +106,8 @@ if [[ -z $notes_file ]]; then
     cat > "$notes_file" <<EOF
 SwiftGodotKit Apple libgodot payloads built from Godot commit $godot_sha.
 Custom Godot source: https://github.com/$godot_repo/commit/$custom_godot_sha
+Custom Godot SDK: https://github.com/$godot_repo/releases/tag/$custom_godot_tag
+Source SDK asset SHA-256: $custom_godot_asset_sha
 
 - macOS arm64 and x86_64 XCFramework (SHA-256: $mac_checksum)
 - iOS arm64 device and simulator XCFramework (SHA-256: $ios_checksum)
@@ -102,12 +122,25 @@ if [[ ${RELEASE_PRERELEASE:-0} == 1 ]]; then
     release_flags+=(--prerelease)
 fi
 
+release_created=1
 gh release create "$tag" "$mac_zip" "$ios_zip" \
     --repo "$release_repo" \
     --title "$tag" \
     --notes-file "$notes_file" \
     "${release_flags[@]}"
 
+published_mac_digest=$(gh release view "$tag" --repo "$release_repo" --json assets --jq '.assets[] | select(.name == "libgodot-macos.xcframework.zip") | .digest')
+published_ios_digest=$(gh release view "$tag" --repo "$release_repo" --json assets --jq '.assets[] | select(.name == "libgodot-ios.xcframework.zip") | .digest')
+[[ "$published_mac_digest" == "sha256:$mac_checksum" ]] || {
+    echo "Published macOS digest mismatch: $published_mac_digest" >&2
+    exit 1
+}
+[[ "$published_ios_digest" == "sha256:$ios_checksum" ]] || {
+    echo "Published iOS digest mismatch: $published_ios_digest" >&2
+    exit 1
+}
+
 cat "$manifest_candidate" > "$package_file"
+release_created=0
 
 echo "Updated $package_file with the published URLs and checksums."

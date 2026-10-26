@@ -81,6 +81,27 @@ GODOT_DIR="$(cd "$2" && pwd)"
 mkdir -p "$3"
 OUTPUT_DIR="$(cd "$3" && pwd)"
 
+if [[ ! -f "$SWIFTGODOT_DIR/Package.swift" ]]; then
+    echo "error: expected a SwiftGodot checkout at $SWIFTGODOT_DIR" >&2
+    exit 1
+fi
+
+if [[ -f "$GODOT_DIR/include/libgodot.h" && -f "$GODOT_DIR/BUILD_INFO.json" ]]; then
+    INPUT_KIND=sdk
+    HEADERS_SOURCE_DIR="$GODOT_DIR/include"
+elif [[ -f "$GODOT_DIR/core/extension/libgodot.h" ]]; then
+    INPUT_KIND=source
+    HEADERS_SOURCE_DIR="$GODOT_DIR/core/extension"
+else
+    echo "error: expected a custom-Godot SDK or source tree at $GODOT_DIR" >&2
+    exit 1
+fi
+
+if [[ "$BUILD_ARTIFACTS" == "1" && "$INPUT_KIND" == "sdk" ]]; then
+    echo "error: --build requires a custom-Godot source tree, not a published SDK" >&2
+    exit 1
+fi
+
 case "$CONFIGURATION" in
     release|debug)
         ;;
@@ -177,6 +198,57 @@ verify_embeddable_ios_archive() {
     fi
 }
 
+verify_macos_dylib() {
+    local dylib="$1"
+    local expected_arch="$2"
+    local symbols
+    local architectures
+
+    symbols=$(nm -gjU "$dylib" 2>/dev/null) || {
+        echo "error: could not inspect symbols in $dylib" >&2
+        exit 1
+    }
+    for symbol in _libgodot_create_godot_instance _libgodot_destroy_godot_instance; do
+        if ! grep -qx "$symbol" <<<"$symbols"; then
+            echo "error: $dylib is missing $symbol" >&2
+            exit 1
+        fi
+    done
+    if grep -qx _main <<<"$symbols"; then
+        echo "error: $dylib exports _main and cannot be embedded in an app" >&2
+        exit 1
+    fi
+
+    architectures=$(lipo -archs "$dylib") || {
+        echo "error: could not inspect architectures in $dylib" >&2
+        exit 1
+    }
+    [[ " $architectures " == *" $expected_arch "* ]] || {
+        echo "error: $dylib does not contain expected architecture $expected_arch" >&2
+        exit 1
+    }
+}
+
+replace_framework() {
+    local staged="$1"
+    local destination="$2"
+    local backup=""
+
+    if [[ -e "$destination" ]]; then
+        backup="$destination.backup.$$"
+        mv "$destination" "$backup"
+    fi
+    if ! mv "$staged" "$destination"; then
+        if [[ -n "$backup" ]]; then
+            mv "$backup" "$destination"
+        fi
+        return 1
+    fi
+    if [[ -n "$backup" ]]; then
+        rm -rf "$backup"
+    fi
+}
+
 zip_payloads() {
     local mac_zip="$OUTPUT_DIR/mac/libgodot-macos.xcframework.zip"
     local ios_zip="$OUTPUT_DIR/ios/libgodot-ios.xcframework.zip"
@@ -187,9 +259,8 @@ zip_payloads() {
     fi
 
     echo "Creating SwiftPM payload zips..."
-    rm -f "$mac_zip" "$ios_zip"
-    (cd "$OUTPUT_DIR/mac" && ditto -c -k --sequesterRsrc --keepParent libgodot.xcframework libgodot-macos.xcframework.zip)
-    (cd "$OUTPUT_DIR/ios" && ditto -c -k --sequesterRsrc --keepParent libgodot.xcframework libgodot-ios.xcframework.zip)
+    scripts/create-deterministic-zip "$OUTPUT_DIR/mac/libgodot.xcframework" "$mac_zip"
+    scripts/create-deterministic-zip "$OUTPUT_DIR/ios/libgodot.xcframework" "$ios_zip"
 
     echo ""
     echo "SwiftPM checksums:"
@@ -207,36 +278,37 @@ fi
 
 mkdir -p "$OUTPUT_DIR/mac" "$OUTPUT_DIR/ios"
 
-TMPDIR="$(mktemp -d)"
-trap 'rm -rf "$TMPDIR"' EXIT
+PACKAGING_TMP_DIR="$(mktemp -d)"
+trap 'rm -rf "$PACKAGING_TMP_DIR"' EXIT
 
-HEADERS_DIR="$TMPDIR/headers"
+HEADERS_DIR="$PACKAGING_TMP_DIR/headers"
 mkdir -p "$HEADERS_DIR"
 
-cp "$GODOT_DIR/core/extension/libgodot.h" "$HEADERS_DIR/libgodot.h"
-if [[ -f "$GODOT_DIR/core/extension/gdextension_interface.gen.h" ]]; then
-    cp "$GODOT_DIR/core/extension/gdextension_interface.gen.h" "$HEADERS_DIR/gdextension_interface.gen.h"
+cp "$HEADERS_SOURCE_DIR/libgodot.h" "$HEADERS_DIR/libgodot.h"
+if [[ -f "$HEADERS_SOURCE_DIR/gdextension_interface.gen.h" ]]; then
+    cp "$HEADERS_SOURCE_DIR/gdextension_interface.gen.h" "$HEADERS_DIR/gdextension_interface.gen.h"
 fi
 
 select_artifacts
 
 echo "Packaging macOS libgodot..."
 if [[ -f "$MAC_ARM_LIB" && -f "$MAC_X86_LIB" ]]; then
-    if [[ -d "$OUTPUT_DIR/mac/libgodot.xcframework" ]]; then
-        mv "$OUTPUT_DIR/mac/libgodot.xcframework" "$OUTPUT_DIR/mac/libgodot.xcframework.bak.$(date +%s)"
-    fi
-    MAC_ARM_TMP="$TMPDIR/libgodot-arm64.dylib"
-    MAC_X86_TMP="$TMPDIR/libgodot-x86_64.dylib"
+    verify_macos_dylib "$MAC_ARM_LIB" arm64
+    verify_macos_dylib "$MAC_X86_LIB" x86_64
+    MAC_ARM_TMP="$PACKAGING_TMP_DIR/libgodot-arm64.dylib"
+    MAC_X86_TMP="$PACKAGING_TMP_DIR/libgodot-x86_64.dylib"
     cp "$MAC_ARM_LIB" "$MAC_ARM_TMP"
     cp "$MAC_X86_LIB" "$MAC_X86_TMP"
     install_name_tool -id @rpath/libgodotkit.dylib "$MAC_ARM_TMP"
     install_name_tool -id @rpath/libgodotkit.dylib "$MAC_X86_TMP"
-    UNIVERSAL_LIB="$TMPDIR/libgodotkit.dylib"
+    UNIVERSAL_LIB="$PACKAGING_TMP_DIR/libgodotkit.dylib"
     lipo -create -output "$UNIVERSAL_LIB" "$MAC_ARM_TMP" "$MAC_X86_TMP"
+    MAC_FRAMEWORK="$PACKAGING_TMP_DIR/libgodot-macos.xcframework"
     xcodebuild -create-xcframework \
         -library "$UNIVERSAL_LIB" \
         -headers "$HEADERS_DIR" \
-        -output "$OUTPUT_DIR/mac/libgodot.xcframework"
+        -output "$MAC_FRAMEWORK"
+    replace_framework "$MAC_FRAMEWORK" "$OUTPUT_DIR/mac/libgodot.xcframework"
 else
     cat <<EOF
 Missing macOS libgodot dylibs.
@@ -245,6 +317,7 @@ Build them first with:
     scons platform=macos arch=arm64 target=template_$CONFIGURATION library_type=shared_library vulkan=no metal=yes disable_path_overrides=no
     scons platform=macos arch=x86_64 target=template_$CONFIGURATION library_type=shared_library vulkan=no metal=yes disable_path_overrides=no
 EOF
+    exit 1
 fi
 
 echo "Packaging iOS libgodot..."
@@ -257,12 +330,8 @@ if [[ -f "$IOS_DEVICE_LIB" ]]; then
         verify_embeddable_ios_archive "$IOS_SIM_X86_LIB"
     fi
 
-    if [[ -d "$OUTPUT_DIR/ios/libgodot.xcframework" ]]; then
-        mv "$OUTPUT_DIR/ios/libgodot.xcframework" "$OUTPUT_DIR/ios/libgodot.xcframework.bak.$(date +%s)"
-    fi
-
-    IOS_DEVICE_DIR="$TMPDIR/ios-device"
-    IOS_SIM_DIR="$TMPDIR/ios-simulator"
+    IOS_DEVICE_DIR="$PACKAGING_TMP_DIR/ios-device"
+    IOS_SIM_DIR="$PACKAGING_TMP_DIR/ios-simulator"
     mkdir -p "$IOS_DEVICE_DIR" "$IOS_SIM_DIR"
 
     IOS_DEVICE_TMP="$IOS_DEVICE_DIR/libgodotkit.a"
@@ -280,19 +349,21 @@ if [[ -f "$IOS_DEVICE_LIB" ]]; then
         cp "$IOS_SIM_X86_LIB" "$IOS_SIM_TMP"
     fi
 
+    IOS_FRAMEWORK="$PACKAGING_TMP_DIR/libgodot-ios.xcframework"
     if [[ -n "$IOS_SIM_TMP" ]]; then
         xcodebuild -create-xcframework \
             -library "$IOS_DEVICE_TMP" \
             -headers "$HEADERS_DIR" \
             -library "$IOS_SIM_TMP" \
             -headers "$HEADERS_DIR" \
-            -output "$OUTPUT_DIR/ios/libgodot.xcframework"
+            -output "$IOS_FRAMEWORK"
     else
         xcodebuild -create-xcframework \
             -library "$IOS_DEVICE_TMP" \
             -headers "$HEADERS_DIR" \
-            -output "$OUTPUT_DIR/ios/libgodot.xcframework"
+            -output "$IOS_FRAMEWORK"
     fi
+    replace_framework "$IOS_FRAMEWORK" "$OUTPUT_DIR/ios/libgodot.xcframework"
 else
     cat <<EOF
 Missing iOS libgodot static libraries.
@@ -301,6 +372,7 @@ Build them first with:
     scons platform=ios arch=arm64 ios_simulator=no target=template_$CONFIGURATION library_type=static_library vulkan=no metal=yes disable_path_overrides=no
     scons platform=ios arch=arm64 ios_simulator=yes target=template_$CONFIGURATION library_type=static_library vulkan=no metal=yes disable_path_overrides=no
 EOF
+    exit 1
 fi
 
 if [[ "$CREATE_ZIPS" == "1" ]]; then

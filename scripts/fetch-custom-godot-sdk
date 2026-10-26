@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ $# -ne 2 ]]; then
+    echo "usage: fetch-custom-godot-sdk LOCK_FILE OUTPUT_DIR" >&2
+    exit 2
+fi
+
+lock_file=$(cd "$(dirname "$1")" && pwd)/$(basename "$1")
+mkdir -p "$(dirname "$2")"
+output_parent=$(cd "$(dirname "$2")" && pwd)
+output_dir="$output_parent/$(basename "$2")"
+
+repository=$(jq -er '.repository | select(type == "string" and contains("/"))' "$lock_file")
+tag=$(jq -er '.tag | select(type == "string" and length > 0)' "$lock_file")
+asset=$(jq -er '.asset | select(type == "string" and length > 0)' "$lock_file")
+expected_sha=$(jq -er '.sha256 | select(test("^[0-9a-f]{64}$"))' "$lock_file")
+expected_commit=$(jq -er '.customGodotCommit | select(test("^[0-9a-f]{40}$"))' "$lock_file")
+
+release_commit=$(gh api "repos/$repository/git/ref/tags/$tag" --jq '.object | select(.type == "commit") | .sha')
+[[ "$release_commit" == "$expected_commit" ]] || {
+    echo "error: release tag resolves to $release_commit; expected $expected_commit" >&2
+    exit 1
+}
+
+asset_digest=$(gh release view "$tag" --repo "$repository" --json assets --jq ".assets[] | select(.name == \"$asset\") | .digest")
+[[ "$asset_digest" == "sha256:$expected_sha" ]] || {
+    echo "error: release asset digest is $asset_digest; expected sha256:$expected_sha" >&2
+    exit 1
+}
+
+staging=$(mktemp -d "$output_parent/.libgodot-sdk.XXXXXX")
+backup=""
+cleanup() {
+    rm -rf "$staging"
+    if [[ -n "$backup" && -d "$backup" && ! -d "$output_dir" ]]; then
+        mv "$backup" "$output_dir"
+    fi
+}
+trap cleanup EXIT
+
+gh release download "$tag" --repo "$repository" --pattern "$asset" --dir "$staging"
+actual_sha=$(shasum -a 256 "$staging/$asset" | awk '{print $1}')
+[[ "$actual_sha" == "$expected_sha" ]] || {
+    echo "error: downloaded asset checksum is $actual_sha; expected $expected_sha" >&2
+    exit 1
+}
+
+mkdir "$staging/sdk"
+ditto -x -k "$staging/$asset" "$staging/sdk"
+scripts/verify-custom-godot-sdk "$staging/sdk" "$lock_file"
+
+if [[ -e "$output_dir" ]]; then
+    backup="$output_dir.backup.$$"
+    mv "$output_dir" "$backup"
+fi
+mv "$staging/sdk" "$output_dir"
+if [[ -n "$backup" ]]; then
+    rm -rf "$backup"
+    backup=""
+fi
+
+echo "Fetched $repository@$tag/$asset into $output_dir"
