@@ -1,0 +1,109 @@
+version: "3"
+
+vars:
+  SWIFTGODOT: '{{.SWIFTGODOT | default "../SwiftGodot"}}'
+  CUSTOM_GODOT: '{{.CUSTOM_GODOT | default "../../custom-godot"}}'
+  GODOT: '{{.GODOT | default (printf "%s/godot" .CUSTOM_GODOT)}}'
+  OUTPUT: '{{.OUTPUT | default "build"}}'
+  RELEASE_REPO: '{{.RELEASE_REPO | default "cafecito-games/SwiftGodotKit"}}'
+  GODOT_REPO: '{{.GODOT_REPO | default "cafecito-games/custom-godot"}}'
+  JOBS:
+    sh: sysctl -n hw.logicalcpu 2>/dev/null || echo 8
+
+tasks:
+  default:
+    desc: List available tasks
+    silent: true
+    cmds:
+      - task --list
+
+  build:
+    desc: Build the SwiftGodotKit library against Cafecito SwiftGodot
+    cmds:
+      - swift build --target SwiftGodotKit
+
+  build:sample:
+    desc: Build the bundled TrivialSample executable
+    cmds:
+      - swift build --product TrivialSample
+
+  compatibility:check:
+    desc: Check that the selected forks expose the APIs required by SwiftGodotKit
+    silent: true
+    env:
+      SWIFTGODOT_DIR: "{{.SWIFTGODOT}}"
+      GODOT_DIR: "{{.GODOT}}"
+    cmds:
+      - scripts/check-fork-compatibility
+
+  payload:package:
+    desc: Package existing release libgodot slices into Apple XCFrameworks
+    cmds:
+      - scripts/make-libgodot.xcframework --configuration release "{{.SWIFTGODOT}}" "{{.GODOT}}" "{{.OUTPUT}}"
+
+  payload:release:
+    desc: Build and package release libgodot slices
+    cmds:
+      - scripts/make-libgodot.xcframework --build --configuration release --zip --jobs "{{.JOBS}}" "{{.SWIFTGODOT}}" "{{.GODOT}}" "{{.OUTPUT}}"
+
+  payload:debug:
+    desc: Build and package debug libgodot slices
+    cmds:
+      - scripts/make-libgodot.xcframework --build --configuration debug --zip --jobs "{{.JOBS}}" "{{.SWIFTGODOT}}" "{{.GODOT}}" "{{.OUTPUT}}"
+
+  payload:zip:
+    desc: Zip existing release XCFrameworks and print SwiftPM checksums
+    cmds:
+      - scripts/make-libgodot.xcframework --configuration release --zip "{{.SWIFTGODOT}}" "{{.GODOT}}" "{{.OUTPUT}}"
+
+  release:publish:
+    desc: Publish existing payload zips and update Package.swift; set VERSION
+    preconditions:
+      - sh: test -n "{{.VERSION}}"
+        msg: "Set VERSION, for example: task release:publish VERSION=v0.1.0-libgodot.1"
+    env:
+      RELEASE_PRERELEASE: '{{.RELEASE_PRERELEASE | default "0"}}'
+    cmds:
+      - scripts/publish-libgodot-release "{{.VERSION}}" "{{.GODOT}}" "{{.CUSTOM_GODOT}}" "{{.OUTPUT}}" Package.swift "{{.RELEASE_REPO}}" "{{.GODOT_REPO}}"
+
+  release:
+    desc: Build, package, and publish libgodot payloads; set VERSION
+    preconditions:
+      - sh: test -n "{{.VERSION}}"
+        msg: "Set VERSION, for example: task release VERSION=v0.1.0-libgodot.1"
+    cmds:
+      - task: compatibility:check
+      - task: payload:release
+        vars:
+          SWIFTGODOT: "{{.SWIFTGODOT}}"
+          GODOT: "{{.GODOT}}"
+          OUTPUT: "{{.OUTPUT}}"
+          JOBS: "{{.JOBS}}"
+      - task: release:publish
+        vars:
+          VERSION: "{{.VERSION}}"
+          CUSTOM_GODOT: "{{.CUSTOM_GODOT}}"
+          GODOT: "{{.GODOT}}"
+          OUTPUT: "{{.OUTPUT}}"
+          RELEASE_REPO: "{{.RELEASE_REPO}}"
+          GODOT_REPO: "{{.GODOT_REPO}}"
+          RELEASE_PRERELEASE: '{{.RELEASE_PRERELEASE | default "0"}}'
+
+  sample:
+    desc: Generate the Axolotl sample project and its PCK
+    dir: Samples/AxolotlDemo
+    cmds:
+      - task
+
+  sample:macos:
+    desc: Build the Axolotl sample for macOS
+    dir: Samples/AxolotlDemo
+    cmds:
+      - task build:macos
+
+  sample:ios-simulator:
+    desc: Build the Axolotl sample for the iOS Simulator
+    dir: Samples/AxolotlDemo
+    cmds:
+      - task build:ios-simulator
+

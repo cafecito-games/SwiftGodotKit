@@ -1,7 +1,7 @@
 #if os(macOS)
-import SwiftGodot
-@_spi(SwiftGodotRuntimePrivate) import SwiftGodotRuntime
+@_spi(SwiftGodotRuntimePrivate) import SwiftGodot
 
+@MainActor
 enum DisplayServerMacOSEmbeddedBridge {
     private static var className = StringName("DisplayServerMacOSEmbedded")
 

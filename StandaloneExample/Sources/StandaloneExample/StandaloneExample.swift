@@ -15,6 +15,7 @@ class SpinningCube: Node3D {
     }
 }
 
+@MainActor
 private func loadScene(scene: SceneTree) {
     let rootNodeName = StringName("__standalone_example_root__")
     if scene.root.findChild(pattern: rootNodeName.description, recursive: false, owned: false) != nil {

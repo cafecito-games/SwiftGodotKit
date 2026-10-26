@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+swiftgodot_dir=${SWIFTGODOT_DIR:-../SwiftGodot}
+godot_dir=${GODOT_DIR:-../../custom-godot/godot}
+
+fail() {
+    echo "error: $*" >&2
+    exit 1
+}
+
+[[ -f "$swiftgodot_dir/Package.swift" ]] || fail "SwiftGodot checkout not found at $swiftgodot_dir"
+[[ -f "$godot_dir/core/extension/libgodot.h" ]] || fail "Godot checkout with libgodot not found at $godot_dir"
+
+swiftgodot_remote=$(git -C "$swiftgodot_dir" remote get-url origin 2>/dev/null || true)
+[[ "$swiftgodot_remote" == *cafecito-games/SwiftGodot* ]] || fail "expected the Cafecito SwiftGodot fork, got: $swiftgodot_remote"
+
+api_file="$swiftgodot_dir/Sources/ExtensionApi/extension_api.json"
+[[ -f "$api_file" ]] || fail "SwiftGodot API file not found: $api_file"
+api_version=$(jq -r '.header | "\(.version_major).\(.version_minor).\(.version_patch)"' "$api_file")
+api_build=$(jq -r '.header.version_build' "$api_file")
+[[ "$api_version" == "4.7.2" ]] || fail "SwiftGodot targets Godot $api_version; expected 4.7.2"
+[[ "$api_build" == cafecito_* ]] || fail "SwiftGodot API is not from Cafecito Godot: $api_build"
+
+header="$godot_dir/core/extension/libgodot.h"
+required_symbols=(
+    libgodot_create_godot_instance
+    libgodot_destroy_godot_instance
+    libgodot_ios_create_rendering_layer
+    libgodot_ios_initialize_rendering_layer
+    libgodot_ios_layout_rendering_layer
+    libgodot_ios_start_rendering_layer
+    libgodot_ios_stop_rendering_layer
+)
+
+missing=()
+for symbol in "${required_symbols[@]}"; do
+    if ! rg -q "\\b${symbol}\\b" "$header"; then
+        missing+=("$symbol")
+    fi
+done
+
+if (( ${#missing[@]} > 0 )); then
+    printf 'error: custom Godot is missing SwiftGodotKit libgodot APIs:\n' >&2
+    printf '  - %s\n' "${missing[@]}" >&2
+    printf 'Port the SwiftGodotKit Apple embedding patch set before building payloads.\n' >&2
+    exit 1
+fi
+
+printf 'SwiftGodot: %s (%s)\n' "$(git -C "$swiftgodot_dir" rev-parse --short HEAD)" "$api_build"
+printf 'Godot:      %s\n' "$(git -C "$godot_dir" rev-parse --short HEAD)"
+printf 'Contract:   Cafecito Godot %s with all required libgodot Apple APIs\n' "$api_version"

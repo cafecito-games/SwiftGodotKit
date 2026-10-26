@@ -1,212 +1,131 @@
-SwiftGodotKit provides a way of embedding Godot into an existing Swift
-application and driving Godot from Swift, without having to use an
-extension.   This is a companion to [SwiftGodot](https://github.com/migueldeicaza/SwiftGodot), which
-provides the API binding to the Godot API.  The structure mirrors the
-`react-native-godot` package that lives next to this directory – both rely
-on the new `libgodot` entry points that are part of the `godot/` checkout
-that ships with this workspace.
+# SwiftGodotKit
 
-# New SwiftGodotKit
+SwiftGodotKit embeds Godot in an existing SwiftUI application and lets Swift
+code drive the engine without loading a separate GDExtension.
 
-This branch contains the new embeddable system that is better suited
-to be embedded into an existing iOS and Mac app, and allows either a
-full game to be displayed, or individual parts in an app.  This is
-based on the Godot 4.7 `libgodot` patches that turn Godot into an
-embeddable library.
+This is Cafecito Games' hard fork of
+[migueldeicaza/SwiftGodotKit](https://github.com/migueldeicaza/SwiftGodotKit).
+It targets:
 
-If you are looking for the old version that only ran on macOS, check
-out the `legacy` branch.
+- [cafecito-games/SwiftGodot](https://github.com/cafecito-games/SwiftGodot)
+  v0.4.0;
+- Cafecito Godot 4.7.2 from the private `cafecito-games/custom-godot`
+  repository; and
+- Swift 6.3 or later, compiling this package in Swift 5 language mode.
 
-## Sample Code
+## Fork status
 
-### macOS Sample Code
+The Swift source now builds against Cafecito SwiftGodot. The old split
+`SwiftGodotRuntime` and `GDExtension` module imports have been migrated to the
+fork's consolidated `SwiftGodot` module, and engine-facing APIs are isolated to
+the main actor used by SwiftGodot's engine-thread executor.
 
-This module contains a `TrivialSample` example code that shows both
-how to embed a Godot-packaged game (PCK files), as well as how to embed
-Godot UI elements are created programmatically.  This sample runs on macOS.
+The binary `libgodot` URLs in `Package.swift` are temporarily still the
+upstream Godot 4.7.3-rc payloads. They make source-level development possible,
+but they are not the final Cafecito runtime contract. Do not publish a stable
+SwiftGodotKit release until custom Godot provides the Apple embedding APIs and
+replacement XCFrameworks described in [the porting notes](docs/PORTING.md).
 
-### iOS Sample Code
-
-[`Samples/AxolotlDemo`](Samples/AxolotlDemo/README.md) is a SwiftUI container for
-macOS and iOS. It shows both directions of communication: a SwiftUI button
-calls Godot's `new_game()` method, and a Godot `score_changed` signal updates a
-SwiftUI score label. The sample includes a `main.pck` game pack and supports
-iOS devices and the iOS simulator. See the sample README for build and run
-instructions.
-
-## Using this
-
-Just reference this module from your Package.swift file or from Xcode.
-
-Use Swift 6.3 or later. The package uses Swift 5 language mode.
-SwiftPM supports Apple's prebuilt SwiftSyntax libraries. However, the pinned
-SwiftGodot revision also uses SwiftSyntax in its code generators. Builds with
-Swift 6.4 still compile SwiftSyntax from source. The tools version change
-alone does not remove this build step.
-
-To build the macOS sample:
+Run the contract check at any time:
 
 ```sh
-swift build --product TrivialSample
+task compatibility:check
 ```
 
-### Faster builds with the `binary` branch
+It intentionally fails on an engine checkout that only implements Godot's
+basic create/destroy `libgodot` API.
 
-SwiftGodot and SwiftSyntax can take a long time to compile. The `binary`
-branch uses [SwiftGodotBinary](https://github.com/migueldeicaza/SwiftGodotBinary)
-instead. That package contains prebuilt SwiftGodot XCFrameworks for macOS and
-iOS, so SwiftPM does not compile SwiftGodot or SwiftSyntax. The API is the same
-as on `main`.
-
-To use it, reference the `binary` branch:
+## Add the package
 
 ```swift
-.package(url: "https://github.com/migueldeicaza/SwiftGodotKit", branch: "binary")
+.package(
+    url: "https://github.com/cafecito-games/SwiftGodotKit",
+    branch: "main"
+)
 ```
 
-If your code also imports `SwiftGodot`, get it from SwiftGodotBinary. Do not
-add the SwiftGodot source package, because then your app gets two different
-copies of SwiftGodot:
-
-```swift
-.product(name: "SwiftGodot", package: "SwiftGodotBinary")
-```
-
-If you change an existing project from `main` to `binary`, do a clean build
-first. In Xcode, select Product ▸ Clean Build Folder, or delete the project
-folder in DerivedData. With SwiftPM, run `swift package clean`. If you do not,
-the linker can use the old source-built `SwiftGodot.framework`, and the app
-stops at launch with this error:
-
-```
-dyld: Symbol not found: _$s17SwiftGodotRuntime7WrappedCMn
-```
-
-## Sample
-
-A simple SwiftUI API is provided.
-
-In the example below, in an existing iOS project type using SwiftUI,
-add a Godot PCK file to your project, and then call it like this:
-
-```swift
-import SwiftUI
-import SwiftGodot
-import SwiftGodotKit
-
-struct ContentView: View {
-    @State var app = GodotApp(packFile: "game.pck")
-
-    var body: some View {
-        VStack {
-            Text("Game is below:")
-            GodotAppView()
-                .padding()
-        }
-	.environment(\.godotApp, app)
-    }
-}
-```
-
-There can only be one GodotApp in your application, but you can reference different scenes from it.
-
-# Discussions
-
-You can join our [Discussions on GitHub](https://github.com/migueldeicaza/SwiftGodot/discussions) or the #swiftgodotkit
-channel on the [Swift on Godot Slack server](https://join.slack.com/t/swiftongodot/shared_invite/zt-2aqygohvb-stSRGEAN~c3awuMwtaqCAA).
-
-
-## Godot 4.7 payloads
-
-This branch uses the
-[`v4.7.3-rc-swiftgodotkit.1`](https://github.com/migueldeicaza/godot/releases/tag/v4.7.3-rc-swiftgodotkit.1)
-macOS and iOS payloads. `Package.swift` pins the matching SwiftGodot commit.
-SwiftPM downloads the binaries when it builds the package.
-
-SwiftGodotKit pins a SwiftGodot `main` commit with the Godot 4.7 API. Kit calls
-its custom surface and display methods through cached GDExtension method
-binds, so those methods do not need generated SwiftGodot classes.
-
-### Rebuild the payloads locally
-
-Keep these three checkouts next to each other:
-
-- `godot`: branch `swiftgodotkit-4.7`, based on `upstream/4.7`.
-- `SwiftGodot`: the pinned `main` commit in `Package.swift`.
-- `SwiftGodotKit`: branch `swiftgodotkit-4.7`.
-
-To reproduce the payloads, build the engine archives and XCFrameworks:
-
-```sh
-cd SwiftGodotKit/scripts
-make release-payloads
-```
-
-This builds macOS arm64 and x86_64 dylibs, and iOS device and simulator
-archives. It creates `build/mac/libgodot.xcframework` and
-`build/ios/libgodot.xcframework`, with zip files and checksums next to them.
-The process can take several minutes. If the five engine slices already exist
-for the current 4.7 commit, run `make package` to package them again.
-To test a new local engine build, change the two binary targets in
-`Package.swift` from `url` and `checksum` to these local XCFramework paths.
-
-You need Xcode command-line tools and `scons` in `PATH`. The default paths use
-the adjacent checkouts. You can set `SWIFTGODOT`, `GODOT`, and `OUTPUT` when you
-run `make`.
-
-To build the SwiftUI sample, run:
-
-```sh
-cd SwiftGodotKit/Samples/AxolotlDemo
-make
-make build-macos
-make build-ios-simulator
-```
-
-The sample pack script uses `/Applications/Godot-47.app`. Set `GODOT_APP` if
-you keep the Godot 4.7 editor at a different path.
-
-For the next payload release, push the matching Godot commit.
-Then run `make publish-release VERSION=<new tag>` from `scripts/`. This uploads
-the two zip files to a Godot release and updates the binary URLs and checksums
-in `Package.swift`. Set `RELEASE_PRERELEASE=1` for a prerelease. Update the
-SwiftGodot revision if its bindings changed. Use a new tag for each payload
-because SwiftPM caches the URL.
-
-### Use the 4.7 branch
-
-Add the current 4.7 branch through SwiftPM or Xcode:
-
-```swift
-.package(url: "https://github.com/migueldeicaza/SwiftGodotKit", branch: "swiftgodotkit-4.7")
-```
-
-and depend on the product:
+Then add the product to the app target:
 
 ```swift
 .product(name: "SwiftGodotKit", package: "SwiftGodotKit")
 ```
 
-SwiftPM downloads `libgodot-macos.xcframework.zip` or
-`libgodot-ios.xcframework.zip` automatically for the target platform.
+The package already resolves `cafecito-games/SwiftGodot` v0.4.0. Do not add a
+second SwiftGodot implementation to the same target.
 
-Note for Godot 4.7 on macOS: template `libgodot` builds usually expose only
-`macos`/`headless` display drivers. `TrivialSample` therefore defaults to
-`macos` on macOS. If you want true embedded rendering (`--display-driver embedded`)
-you need a `libgodot` build that registers the embedded display driver.
+## SwiftUI example
 
-### Legacy notes
+Add an exported Godot PCK to the application bundle, then create one
+`GodotApp` for the process:
 
-For older setups, you may still find notes referring to `libgodot_44_stable`.
-Compile libgodot, this sample shows how I do this myself, but
-you can pass the flags that make sense for your scenarios:
+```swift
+import SwiftGodot
+import SwiftGodotKit
+import SwiftUI
 
+struct ContentView: View {
+    @State private var app = GodotApp(packFile: "game.pck")
 
+    var body: some View {
+        GodotAppView()
+            .environment(\.godotApp, app)
+    }
+}
 ```
-cd libgodot
-scons target=template_debug dev_build=yes library_type=shared_library debug_symbols=yes 
+
+`Samples/AxolotlDemo` demonstrates macOS and iOS embedding plus two-way
+messages between SwiftUI and Godot. `TrivialSample` builds a scene entirely
+from Swift on macOS.
+
+## Development
+
+This repository uses [Task](https://taskfile.dev) rather than Make.
+
+```sh
+task                    # list tasks
+task build              # build the library
+task build:sample       # build TrivialSample
+task sample             # PCK + Xcode project
+task sample:macos
+task sample:ios-simulator
 ```
 
-The above will produce the binary that you want, then create an
-xcframework out of it, using the script in this directory or in the
-SwiftGodot scripts folder.
+The default checkout layout is:
+
+```text
+~/CafecitoGames/SwiftGodotKit
+~/CafecitoGames/SwiftGodot
+~/custom-godot/godot
+```
+
+Override any path when needed:
+
+```sh
+task build SWIFTGODOT=/path/to/SwiftGodot
+task compatibility:check GODOT=/path/to/custom-godot/godot
+```
+
+## Build and publish libgodot payloads
+
+Once the custom engine includes the required Apple embedding patch set:
+
+```sh
+task compatibility:check
+task payload:release
+```
+
+This builds macOS arm64/x86_64 shared libraries and iOS arm64 device/simulator
+static libraries, then creates zipped XCFrameworks under `build/`.
+
+To publish the payloads on this repository and rewrite their URLs/checksums in
+`Package.swift`:
+
+```sh
+task release:publish VERSION=v0.1.0-libgodot.1
+```
+
+Use a fresh tag for every payload because SwiftPM caches binary-target URLs.
+Set `RELEASE_PRERELEASE=1` for a prerelease. `RELEASE_REPO`, `GODOT_REPO`,
+`CUSTOM_GODOT`, `GODOT`, and `OUTPUT` are overrideable Task variables.
+
+The original MIT license and attribution are retained in [LICENSE](LICENSE).

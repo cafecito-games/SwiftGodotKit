@@ -32,7 +32,7 @@ signal and lets the app build without a Godot editor installation.
 To regenerate the pack and Xcode project:
 
 ```sh
-make
+task
 ```
 
 The pack script uses `/Applications/Godot-47.app` by default. Set `GODOT_APP`
@@ -41,8 +41,8 @@ to use a different Godot 4.7 application bundle.
 Build both destinations:
 
 ```sh
-make build-macos
-make build-ios-simulator
+task build:macos
+task build:ios-simulator
 ```
 
 For a device build, select an Apple development team in Xcode, choose a

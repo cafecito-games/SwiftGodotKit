@@ -116,9 +116,8 @@ build_godot_artifacts() {
     run_scons platform=macos arch=x86_64 target="$target" library_type=shared_library vulkan=no metal=yes disable_path_overrides=no
 
     echo "Building iOS libgodot ($CONFIGURATION)..."
-    run_scons platform=ios arch=arm64 simulator=no target="$target" library_type=static_library vulkan=no metal=yes disable_path_overrides=no
-    run_scons platform=ios arch=arm64 simulator=yes target="$target" library_type=static_library vulkan=no metal=yes disable_path_overrides=no
-    run_scons platform=ios arch=x86_64 simulator=yes target="$target" library_type=static_library vulkan=no metal=yes disable_path_overrides=no
+    run_scons platform=ios arch=arm64 ios_simulator=no target="$target" library_type=static_library vulkan=no metal=yes disable_path_overrides=no
+    run_scons platform=ios arch=arm64 ios_simulator=yes target="$target" library_type=static_library vulkan=no metal=yes disable_path_overrides=no
 }
 
 select_artifacts() {
@@ -299,9 +298,8 @@ else
 Missing iOS libgodot static libraries.
 Build them first with:
     cd $GODOT_DIR
-    scons platform=ios arch=arm64 simulator=no target=template_$CONFIGURATION library_type=static_library vulkan=no metal=yes disable_path_overrides=no
-    scons platform=ios arch=arm64 simulator=yes target=template_$CONFIGURATION library_type=static_library vulkan=no metal=yes disable_path_overrides=no
-    scons platform=ios arch=x86_64 simulator=yes target=template_$CONFIGURATION library_type=static_library vulkan=no metal=yes disable_path_overrides=no
+    scons platform=ios arch=arm64 ios_simulator=no target=template_$CONFIGURATION library_type=static_library vulkan=no metal=yes disable_path_overrides=no
+    scons platform=ios arch=arm64 ios_simulator=yes target=template_$CONFIGURATION library_type=static_library vulkan=no metal=yes disable_path_overrides=no
 EOF
 fi
 

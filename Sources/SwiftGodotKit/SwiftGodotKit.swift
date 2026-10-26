@@ -13,7 +13,7 @@ import os
 public var initHookCb: ((ExtensionInitializationLevel) -> ())?
 public var deinitHookCb: ((ExtensionInitializationLevel) -> ())?
 
-let logger = Logger(subsystem: "io.github.migueldeicaza.swiftgodotkit", category: "general")
+let logger = Logger(subsystem: "games.cafecito.swiftgodotkit", category: "general")
 
 // Courtesy of GPT-4
 func withUnsafePtr (strings: [String], callback: (UnsafeMutablePointer<UnsafeMutablePointer<Int8>?>?)->()) {
@@ -37,6 +37,7 @@ func withUnsafePtr (strings: [String], callback: (UnsafeMutablePointer<UnsafeMut
     cStringArray.deallocate()
 }
 
+@MainActor
 extension GodotInstance {
     public static func create(args: [String]) -> GodotInstance? {
         var instance: UnsafeMutableRawPointer? = nil

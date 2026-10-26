@@ -14,6 +14,7 @@ import Dispatch
 import UIKit
 #endif
 
+@MainActor
 public final class GodotAppViewHandle {
     private weak var app: GodotApp?
     fileprivate var viewId: Int64?
@@ -62,6 +63,7 @@ private struct ViewCallback {
 }
 
 /// You create a single Godot App per application, this contains your game PCK
+@MainActor
 @Observable
 public class GodotApp: ObservableObject {
     let path: String
@@ -298,7 +300,7 @@ public class GodotApp: ObservableObject {
         isDrawing = false
     }
 
-    public func runOnGodotThread(async: Bool = true, _ block: @escaping () -> Void) {
+    public func runOnGodotThread(async: Bool = true, _ block: @MainActor @escaping () -> Void) {
         guard let instance else {
             Logger.App.error("runOnGodotThread called before Godot instance was created")
             emitRuntimeEvent(
@@ -313,20 +315,17 @@ public class GodotApp: ObservableObject {
         }
         guard instance.isStarted() else { return }
 
-        let invoke = { [weak self] in
+        let invoke = { @MainActor [weak self] in
             guard let self, let instance = self.instance, instance.isStarted() else { return }
             block()
         }
 
-        if Thread.isMainThread {
-            invoke()
-            return
-        }
-
         if async {
-            DispatchQueue.main.async(execute: invoke)
+            Task { @MainActor in
+                invoke()
+            }
         } else {
-            DispatchQueue.main.sync(execute: invoke)
+            invoke()
         }
     }
 
@@ -463,41 +462,19 @@ public class GodotApp: ObservableObject {
     @discardableResult
     public func registerEventHandler(_ handler: @escaping (GodotAppEvent) -> Void) -> UUID {
         let id = UUID()
-        if Thread.isMainThread {
-            runtimeEventHandlers[id] = handler
-        } else {
-            DispatchQueue.main.sync {
-                runtimeEventHandlers[id] = handler
-            }
-        }
+        runtimeEventHandlers[id] = handler
         return id
     }
 
     public func unregisterEventHandler(_ id: UUID?) {
         guard let id else { return }
-        if Thread.isMainThread {
-            runtimeEventHandlers[id] = nil
-        } else {
-            DispatchQueue.main.sync {
-                runtimeEventHandlers[id] = nil
-            }
-        }
+        runtimeEventHandlers[id] = nil
     }
 
     func emitRuntimeEvent(_ event: GodotAppEvent) {
-        let dispatch = { [weak self] in
-            guard let self else { return }
-            let handlers = Array(self.runtimeEventHandlers.values)
-            guard !handlers.isEmpty else { return }
-            for handler in handlers {
-                handler(event)
-            }
-        }
-
-        if Thread.isMainThread {
-            dispatch()
-        } else {
-            DispatchQueue.main.async(execute: dispatch)
+        let handlers = Array(runtimeEventHandlers.values)
+        for handler in handlers {
+            handler(event)
         }
     }
 

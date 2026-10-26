@@ -1,0 +1,43 @@
+version: "3"
+
+tasks:
+  default:
+    desc: Build the game pack and generate the Xcode project
+    deps: [pck, project]
+
+  pck:
+    desc: Export the Godot project as a PCK
+    cmds:
+      - ./Scripts/build-pck.sh
+    sources:
+      - GodotProject/**/*
+      - Scripts/build-pck.sh
+    generates:
+      - Resources/main.pck
+
+  project:
+    desc: Generate AxolotlDemo.xcodeproj with XcodeGen
+    cmds:
+      - xcodegen generate
+    sources:
+      - project.yml
+    generates:
+      - AxolotlDemo.xcodeproj/project.pbxproj
+
+  build:macos:
+    desc: Build the generated macOS app
+    deps: [pck, project]
+    cmds:
+      - xcodebuild -project AxolotlDemo.xcodeproj -scheme AxolotlDemo-macOS -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO build
+
+  build:ios-simulator:
+    desc: Build the generated iOS Simulator app
+    deps: [pck, project]
+    cmds:
+      - xcodebuild -project AxolotlDemo.xcodeproj -scheme AxolotlDemo-iOS -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
+
+  clean:
+    desc: Clean all generated Xcode targets
+    cmds:
+      - xcodebuild -project AxolotlDemo.xcodeproj -alltargets clean
+

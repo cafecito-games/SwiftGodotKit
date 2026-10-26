@@ -1,7 +1,7 @@
 import Foundation
 import SwiftGodot
-@_implementationOnly import GDExtension
 
+@MainActor
 final class SwiftGodotHostBridge: Node {
     static let nodeName = "__swiftgodotkit_bridge__"
 
@@ -21,9 +21,9 @@ final class SwiftGodotHostBridge: Node {
         _ = emitSignal("messageFromHost", Variant(message))
     }
 
-    override public class var classInitializer: Void {
+    nonisolated override public class var classInitializer: Void {
         let _ = super.classInitializer
-        return initializeClass
+        return MainActor.assumeIsolated { initializeClass }
     }
 
     private static let initializeClass: Void = {
@@ -61,6 +61,7 @@ final class SwiftGodotHostBridge: Node {
 private let hostBridgeRegistrationLock = NSLock()
 private var didInstallHostBridgeHook = false
 
+@MainActor
 func ensureHostBridgeTypeRegistration() {
     hostBridgeRegistrationLock.lock()
     defer { hostBridgeRegistrationLock.unlock() }

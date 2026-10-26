@@ -1,8 +1,8 @@
 # Standalone example
 
-This Swift package uses the local SwiftGodotKit checkout and the matching
-published SwiftGodot 4.7 revision. SwiftGodotKit downloads the published
-libgodot XCFrameworks through SwiftPM.
+This Swift package uses the local SwiftGodotKit checkout and Cafecito
+SwiftGodot v0.4.0. SwiftGodotKit downloads its libgodot XCFrameworks through
+SwiftPM.
 
 Then build and run the macOS example:
 

@@ -3,9 +3,9 @@
 //
 
 #if os(iOS)
-import SwiftGodot
-@_spi(SwiftGodotRuntimePrivate) import SwiftGodotRuntime
+@_spi(SwiftGodotRuntimePrivate) import SwiftGodot
 
+@MainActor
 enum DisplayServerAppleEmbeddedBridge {
     typealias Handle = GodotNativeObjectPointer
 

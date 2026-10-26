@@ -1,16 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [[ $# -ne 5 ]]; then
-    echo "usage: publish-libgodot-release TAG GODOT_DIR OUTPUT_DIR PACKAGE_FILE REPO" >&2
+if [[ $# -ne 7 ]]; then
+    echo "usage: publish-libgodot-release TAG GODOT_DIR CUSTOM_GODOT_DIR OUTPUT_DIR PACKAGE_FILE RELEASE_REPO GODOT_REPO" >&2
     exit 2
 fi
 
 tag=$1
 godot_dir=$(cd "$2" && pwd)
-output_dir=$(cd "$3" && pwd)
-package_file=$4
-repo=$5
+custom_godot_dir=$(cd "$3" && pwd)
+output_dir=$(cd "$4" && pwd)
+package_file=$5
+release_repo=$6
+godot_repo=$7
 
 if [[ ! $tag =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]]; then
     echo "Invalid release tag: $tag" >&2
@@ -27,13 +29,15 @@ for file in "$mac_zip" "$ios_zip" "$package_file"; do
 done
 
 godot_sha=$(git -C "$godot_dir" rev-parse HEAD)
-gh api "repos/$repo/commits/$godot_sha" --jq .sha >/dev/null
+custom_godot_sha=$(git -C "$custom_godot_dir" rev-parse HEAD)
+gh api "repos/$godot_repo/commits/$custom_godot_sha" --jq .sha >/dev/null
 mac_checksum=$(swift package compute-checksum "$mac_zip")
 ios_checksum=$(swift package compute-checksum "$ios_zip")
-mac_url="https://github.com/$repo/releases/download/$tag/libgodot-macos.xcframework.zip"
-ios_url="https://github.com/$repo/releases/download/$tag/libgodot-ios.xcframework.zip"
+mac_url="https://github.com/$release_repo/releases/download/$tag/libgodot-macos.xcframework.zip"
+ios_url="https://github.com/$release_repo/releases/download/$tag/libgodot-ios.xcframework.zip"
 
 echo "Godot commit: $godot_sha"
+echo "Custom Godot commit: $custom_godot_sha"
 echo "macOS checksum: $mac_checksum"
 echo "iOS checksum: $ios_checksum"
 
@@ -72,7 +76,7 @@ Path(sys.argv[2]).write_text(source)
 PY
 
 if [[ ${PUBLISH_DRY_RUN:-0} == 1 ]]; then
-    echo "Dry run: would create $tag in $repo and update $package_file"
+    echo "Dry run: would create $tag in $release_repo and update $package_file"
     diff -u "$package_file" "$manifest_candidate" || true
     exit 0
 fi
@@ -83,9 +87,10 @@ if [[ -z $notes_file ]]; then
     notes_file=$temporary_notes
     cat > "$notes_file" <<EOF
 SwiftGodotKit Apple libgodot payloads built from Godot commit $godot_sha.
+Custom Godot source: https://github.com/$godot_repo/commit/$custom_godot_sha
 
 - macOS arm64 and x86_64 XCFramework (SHA-256: $mac_checksum)
-- iOS arm64 device and arm64/x86_64 simulator XCFramework (SHA-256: $ios_checksum)
+- iOS arm64 device and simulator XCFramework (SHA-256: $ios_checksum)
 EOF
 elif [[ ! -f $notes_file ]]; then
     echo "Missing release notes: $notes_file" >&2
@@ -98,8 +103,7 @@ if [[ ${RELEASE_PRERELEASE:-0} == 1 ]]; then
 fi
 
 gh release create "$tag" "$mac_zip" "$ios_zip" \
-    --repo "$repo" \
-    --target "$godot_sha" \
+    --repo "$release_repo" \
     --title "$tag" \
     --notes-file "$notes_file" \
     "${release_flags[@]}"

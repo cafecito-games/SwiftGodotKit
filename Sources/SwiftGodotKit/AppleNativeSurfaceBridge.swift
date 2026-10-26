@@ -2,9 +2,9 @@
 // generated bindings only need the standard Godot 4.7 API.
 
 #if os(macOS) || os(iOS)
-import SwiftGodot
-@_spi(SwiftGodotRuntimePrivate) import SwiftGodotRuntime
+@_spi(SwiftGodotRuntimePrivate) import SwiftGodot
 
+@MainActor
 enum AppleNativeSurfaceBridge {
     private static var surfaceClassName = StringName("RenderingNativeSurfaceApple")
     private static var windowClassName = StringName("Window")
