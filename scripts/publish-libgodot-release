@@ -21,7 +21,8 @@ fi
 
 mac_zip="$output_dir/mac/libgodot-macos.xcframework.zip"
 ios_zip="$output_dir/ios/libgodot-ios.xcframework.zip"
-for file in "$mac_zip" "$ios_zip" "$package_file"; do
+provenance_file="$output_dir/libgodot-payload-provenance.json"
+for file in "$mac_zip" "$ios_zip" "$provenance_file" "$package_file"; do
     if [[ ! -f $file ]]; then
         echo "Missing release input: $file" >&2
         exit 1
@@ -37,6 +38,21 @@ custom_godot_asset_sha=$(jq -er '.sha256' "$sdk_lock")
 gh api "repos/$godot_repo/commits/$custom_godot_sha" --jq .sha >/dev/null
 mac_checksum=$(swift package compute-checksum "$mac_zip")
 ios_checksum=$(swift package compute-checksum "$ios_zip")
+
+jq -e \
+    --arg repository "$(jq -er '.repository' "$sdk_lock")" \
+    --arg tag "$custom_godot_tag" \
+    --arg asset "$custom_godot_asset" \
+    --arg sdkSha256 "$custom_godot_asset_sha" \
+    --arg customGodotCommit "$custom_godot_sha" \
+    --arg godotCommit "$godot_sha" \
+    --arg macSha256 "$mac_checksum" \
+    --arg iosSha256 "$ios_checksum" \
+    '.schemaVersion == 1 and .inputKind == "locked-sdk" and .repository == $repository and .tag == $tag and .asset == $asset and .sdkSha256 == $sdkSha256 and .customGodotCommit == $customGodotCommit and .godotCommit == $godotCommit and .macSha256 == $macSha256 and .iosSha256 == $iosSha256' \
+    "$provenance_file" >/dev/null || {
+        echo "Payload provenance does not match the locked SDK or payload ZIPs" >&2
+        exit 1
+    }
 mac_url="https://github.com/$release_repo/releases/download/$tag/libgodot-macos.xcframework.zip"
 ios_url="https://github.com/$release_repo/releases/download/$tag/libgodot-ios.xcframework.zip"
 

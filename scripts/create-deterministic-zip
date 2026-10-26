@@ -23,7 +23,12 @@ def archive_info(path: Path, archive_name: str) -> zipfile.ZipInfo:
     info = zipfile.ZipInfo(archive_name, FIXED_TIMESTAMP)
     info.create_system = 3
     info.compress_type = zipfile.ZIP_DEFLATED
-    info.external_attr = (path.stat().st_mode & 0xFFFF) << 16
+    if path.is_dir():
+        mode = stat.S_IFDIR | 0o755
+    else:
+        executable = bool(path.stat().st_mode & 0o111)
+        mode = stat.S_IFREG | (0o755 if executable else 0o644)
+    info.external_attr = mode << 16
     return info
 
 

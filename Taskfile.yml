@@ -56,8 +56,7 @@ tasks:
   payload:package:
     desc: Package the locked custom-Godot SDK into Apple XCFrameworks
     cmds:
-      - scripts/verify-custom-godot-sdk "{{.LIBGODOT_SDK}}" "{{.LIBGODOT_SDK_LOCK}}"
-      - scripts/make-libgodot.xcframework --configuration release "{{.SWIFTGODOT}}" "{{.LIBGODOT_SDK}}" "{{.OUTPUT}}"
+      - LIBGODOT_SDK_LOCK="{{.LIBGODOT_SDK_LOCK}}" scripts/make-libgodot.xcframework --configuration release "{{.SWIFTGODOT}}" "{{.LIBGODOT_SDK}}" "{{.OUTPUT}}"
 
   payload:build:
     desc: Build release libgodot slices from a custom-Godot source checkout
@@ -76,7 +75,7 @@ tasks:
           SWIFTGODOT: "{{.SWIFTGODOT}}"
           LIBGODOT_SDK_LOCK: "{{.LIBGODOT_SDK_LOCK}}"
           LIBGODOT_SDK: "{{.LIBGODOT_SDK}}"
-      - scripts/make-libgodot.xcframework --configuration release --zip "{{.SWIFTGODOT}}" "{{.LIBGODOT_SDK}}" "{{.OUTPUT}}"
+      - LIBGODOT_SDK_LOCK="{{.LIBGODOT_SDK_LOCK}}" scripts/make-libgodot.xcframework --configuration release --zip "{{.SWIFTGODOT}}" "{{.LIBGODOT_SDK}}" "{{.OUTPUT}}"
 
   payload:debug:
     desc: Build and package debug libgodot slices
@@ -86,7 +85,7 @@ tasks:
   payload:zip:
     desc: Zip existing release XCFrameworks and print SwiftPM checksums
     cmds:
-      - scripts/make-libgodot.xcframework --configuration release --zip "{{.SWIFTGODOT}}" "{{.LIBGODOT_SDK}}" "{{.OUTPUT}}"
+      - LIBGODOT_SDK_LOCK="{{.LIBGODOT_SDK_LOCK}}" scripts/make-libgodot.xcframework --configuration release --zip "{{.SWIFTGODOT}}" "{{.LIBGODOT_SDK}}" "{{.OUTPUT}}"
 
   release:publish:
     desc: Publish existing payload zips and update Package.swift; set VERSION

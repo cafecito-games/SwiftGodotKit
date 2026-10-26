@@ -107,15 +107,17 @@ task compatibility:check GODOT=/path/to/custom-godot/godot
 
 ## Build and publish libgodot payloads
 
-Once the custom engine includes the required Apple embedding patch set:
+The approved custom-Godot release and SDK checksum are pinned in
+`config/libgodot-sdk.json`. To fetch, verify, and package that SDK:
 
 ```sh
-task compatibility:check
 task payload:release
 ```
 
-This builds macOS arm64/x86_64 shared libraries and iOS arm64 device/simulator
-static libraries, then creates zipped XCFrameworks under `build/`.
+This downloads the locked Apple SDK, verifies its release commit, archive
+checksum, manifest, and every file, then creates reproducible XCFramework ZIPs
+under `build/`. Use `task payload:build` only when testing a local custom-Godot
+source checkout; source-built payloads cannot be published as the locked SDK.
 
 To publish the payloads on this repository and rewrite their URLs/checksums in
 `Package.swift`:
@@ -126,6 +128,8 @@ task release:publish VERSION=v0.1.0-libgodot.1
 
 Use a fresh tag for every payload because SwiftPM caches binary-target URLs.
 Set `RELEASE_PRERELEASE=1` for a prerelease. `RELEASE_REPO`, `GODOT_REPO`,
-`CUSTOM_GODOT`, `GODOT`, and `OUTPUT` are overrideable Task variables.
+`LIBGODOT_SDK`, `LIBGODOT_SDK_LOCK`, and `OUTPUT` are overrideable Task
+variables. `CUSTOM_GODOT` and `GODOT` apply only to source-build and
+compatibility tasks.
 
 The original MIT license and attribution are retained in [LICENSE](LICENSE).

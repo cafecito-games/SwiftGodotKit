@@ -77,14 +77,16 @@ API so SwiftGodot and engine builds can be validated from the same source.
 - no standalone `app.*.o` object is present; and
 - device and available simulator slices are packaged into one XCFramework.
 
-After custom-Godot support lands, run:
+For the locked custom-Godot SDK release, run:
 
 ```sh
-task compatibility:check
 task payload:release
 task build
 task build:sample
 ```
 
-Then publish a prerelease payload, update `Package.swift`, and test both the
+`payload:release` fetches and verifies `config/libgodot-sdk.json`; use
+`payload:build` for an explicitly local source build. Publication also checks a
+provenance stamp binding the ZIP checksums to the locked SDK. Then publish a
+payload, update `Package.swift`, and test both the
 Axolotl macOS target and iOS Simulator target before declaring the fork stable.
