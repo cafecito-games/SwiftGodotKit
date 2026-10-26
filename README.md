@@ -5,12 +5,12 @@ code drive the engine without loading a separate GDExtension.
 
 This is Cafecito Games' hard fork of
 [migueldeicaza/SwiftGodotKit](https://github.com/migueldeicaza/SwiftGodotKit).
-It targets:
+It targets these exact binary/runtime inputs:
 
-- [cafecito-games/SwiftGodot](https://github.com/cafecito-games/SwiftGodot)
-  v0.4.0;
-- Cafecito Godot 4.7.2 from the private `cafecito-games/custom-godot`
-  repository; and
+- [cafecito-games/SwiftGodotBinary](https://github.com/cafecito-games/SwiftGodotBinary)
+  v0.4.1, produced by the matching Cafecito SwiftGodot release;
+- [Cafecito Godot v4.7.2-20261026.1](https://github.com/cafecito-games/custom-godot/releases/tag/v4.7.2-20261026.1)
+  with Godot base commit `ed1daf0bf001b61586d9930840f2f1394092c079`; and
 - Swift 6.3 or later, compiling this package in Swift 5 language mode.
 
 ## Fork status
@@ -20,20 +20,19 @@ The Swift source now builds against Cafecito SwiftGodot. The old split
 fork's consolidated `SwiftGodot` module, and engine-facing APIs are isolated to
 the main actor used by SwiftGodot's engine-thread executor.
 
-The binary `libgodot` URLs in `Package.swift` are temporarily still the
-upstream Godot 4.7.3-rc payloads. They make source-level development possible,
-but they are not the final Cafecito runtime contract. Do not publish a stable
-SwiftGodotKit release until custom Godot provides the Apple embedding APIs and
-replacement XCFrameworks described in [the porting notes](docs/PORTING.md).
+SwiftPM downloads both SwiftGodot and libgodot from public, immutable Cafecito
+releases. The libgodot payloads are derived from the checksum-locked custom
+Godot SDK and published in
+[v4.7.2-20261026.1-libgodot.1](https://github.com/cafecito-games/SwiftGodotKit/releases/tag/v4.7.2-20261026.1-libgodot.1).
 
 Run the contract check at any time:
 
 ```sh
-task compatibility:check
+task compatibility:sdk
 ```
 
-It intentionally fails on an engine checkout that only implements Godot's
-basic create/destroy `libgodot` API.
+Use `task compatibility:check` instead when validating a local custom-Godot
+source checkout.
 
 ## Add the package
 
@@ -50,8 +49,21 @@ Then add the product to the app target:
 .product(name: "SwiftGodotKit", package: "SwiftGodotKit")
 ```
 
-The package already resolves `cafecito-games/SwiftGodot` v0.4.0. Do not add a
-second SwiftGodot implementation to the same target.
+The package already resolves the exact `cafecito-games/SwiftGodotBinary`
+v0.4.1 package. Do not also depend on source `SwiftGodot`; one executable must
+contain exactly one SwiftGodot module/runtime.
+
+When moving an existing checkout from source SwiftGodot to this binary release,
+discard the old resolution and build products before resolving again:
+
+```sh
+swift package reset
+rm -f Package.resolved
+swift package resolve
+```
+
+The exact pin is intentional: SwiftGodot's compiled Swift ABI, generated Godot
+API, macro executable, and GDExtension C module must come from one release.
 
 ## SwiftUI example
 
@@ -123,7 +135,7 @@ To publish the payloads on this repository and rewrite their URLs/checksums in
 `Package.swift`:
 
 ```sh
-task release:publish VERSION=v0.1.0-libgodot.1
+task release:publish VERSION=v4.7.2-20261026.1-libgodot.1
 ```
 
 Use a fresh tag for every payload because SwiftPM caches binary-target URLs.

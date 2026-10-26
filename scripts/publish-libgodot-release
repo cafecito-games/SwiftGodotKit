@@ -60,14 +60,16 @@ jq -e \
     }
 mac_url="https://github.com/$release_repo/releases/download/$tag/libgodot-macos.xcframework.zip"
 ios_url="https://github.com/$release_repo/releases/download/$tag/libgodot-ios.xcframework.zip"
+package_manifest_temp=""
 
 replace_package_manifest() {
-    local package_dir package_temp
+    local package_dir
     package_dir=$(cd "$(dirname "$package_file")" && pwd)
-    package_temp=$(mktemp "$package_dir/.Package.swift.XXXXXX")
-    cp "$manifest_candidate" "$package_temp"
-    chmod 644 "$package_temp"
-    mv "$package_temp" "$package_file"
+    package_manifest_temp=$(mktemp "$package_dir/.Package.swift.XXXXXX")
+    cp "$manifest_candidate" "$package_manifest_temp"
+    chmod 644 "$package_manifest_temp"
+    mv "$package_manifest_temp" "$package_file"
+    package_manifest_temp=""
 }
 
 echo "Godot commit: $godot_sha"
@@ -88,6 +90,9 @@ cleanup() {
     rm -f "$manifest_candidate"
     if [[ -n $temporary_notes ]]; then
         rm -f "$temporary_notes"
+    fi
+    if [[ -n $package_manifest_temp ]]; then
+        rm -f "$package_manifest_temp"
     fi
     exit "$exit_code"
 }
@@ -163,17 +168,20 @@ elif [[ ! -f $notes_file ]]; then
     exit 1
 fi
 
-release_flags=()
 if [[ ${RELEASE_PRERELEASE:-0} == 1 ]]; then
-    release_flags+=(--prerelease)
+    release_created=1
+    gh release create "$tag" "$mac_zip" "$ios_zip" \
+        --repo "$release_repo" \
+        --title "$tag" \
+        --notes-file "$notes_file" \
+        --prerelease
+else
+    release_created=1
+    gh release create "$tag" "$mac_zip" "$ios_zip" \
+        --repo "$release_repo" \
+        --title "$tag" \
+        --notes-file "$notes_file"
 fi
-
-release_created=1
-gh release create "$tag" "$mac_zip" "$ios_zip" \
-    --repo "$release_repo" \
-    --title "$tag" \
-    --notes-file "$notes_file" \
-    "${release_flags[@]}"
 
 published_mac_digest=$(gh release view "$tag" --repo "$release_repo" --json assets --jq '.assets[] | select(.name == "libgodot-macos.xcframework.zip") | .digest')
 published_ios_digest=$(gh release view "$tag" --repo "$release_repo" --json assets --jq '.assets[] | select(.name == "libgodot-ios.xcframework.zip") | .digest')
