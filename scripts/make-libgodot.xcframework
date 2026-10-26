@@ -303,6 +303,7 @@ zip_payloads() {
             --arg iosSha256 "$ios_sha" \
             '{schemaVersion:1,inputKind:"locked-sdk",repository:$repository,tag:$tag,asset:$asset,sdkSha256:$sdkSha256,customGodotCommit:$customGodotCommit,godotCommit:$godotCommit,macSha256:$macSha256,iosSha256:$iosSha256}' \
             > "$provenance_tmp"
+        chmod 644 "$provenance_tmp"
         mv "$provenance_tmp" "$OUTPUT_DIR/libgodot-payload-provenance.json"
     else
         rm -f "$OUTPUT_DIR/libgodot-payload-provenance.json"
