@@ -54,7 +54,7 @@ The reference implementation is the following ordered commit series on
 9. `4c95248ac7` — SDL device checks for static iOS libgodot
 
 The port is delivered by Cafecito custom-Godot release
-`v4.7.2-20261026.1`. The historical reference series is retained below to
+`v4.7.2-20261026.1`. The historical reference series is retained above to
 explain the runtime contract; Cafecito targets 4.7.2 rather than that branch's
 Godot 4.7.3-rc base.
 
