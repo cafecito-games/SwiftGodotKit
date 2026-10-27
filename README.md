@@ -39,7 +39,7 @@ source checkout.
 ```swift
 .package(
     url: "https://github.com/cafecito-games/SwiftGodotKit",
-    branch: "main"
+    from: "0.1.0"
 )
 ```
 
@@ -48,6 +48,13 @@ Then add the product to the app target:
 ```swift
 .product(name: "SwiftGodotKit", package: "SwiftGodotKit")
 ```
+
+Use `branch: "main"` instead of a version only when you deliberately want to
+track development. The semver line starts at `0.1.0`; the older tags inherited
+from the upstream fork have been removed so range requirements resolve to
+Cafecito releases only. The `v*-libgodot.*` tags are payload releases managed
+by `task release:publish` (see below), not package versions, and never satisfy
+a version requirement.
 
 The package already resolves the exact `cafecito-games/SwiftGodotBinary`
 v0.4.2 package. Do not also depend on source `SwiftGodot`; one executable must
@@ -148,6 +155,23 @@ struct ContentView: View {
 `Samples/AxolotlDemo` demonstrates macOS and iOS embedding plus two-way
 messages between SwiftUI and Godot. `TrivialSample` builds a scene entirely
 from Swift on macOS.
+
+## Releases
+
+Package releases use semantic versioning starting at `v0.1.0`. Trigger the
+**Release** workflow from the repository's Actions tab ("Run workflow") with a
+version such as `0.1.0` on `main`. The workflow then:
+
+1. validates the version — strict semver with an optional leading `v`; it
+   refuses versions containing `libgodot`, which are reserved for payload
+   releases, versions that already have a tag, and versions that an existing
+   tag in the same major range would shadow for range-based consumers;
+2. builds every product and runs the `SwiftGodotRuntime` tests;
+3. tags `main` and publishes a GitHub release with generated notes.
+
+The workflow never touches libgodot payload releases: tags of the form
+`v*-libgodot.*` are created by `task release:publish` and exist only to host
+the binary XCFrameworks that `Package.swift` references.
 
 ## Development
 
