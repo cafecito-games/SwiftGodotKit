@@ -5,6 +5,7 @@
 
 import SwiftUI
 import SwiftGodot
+import SwiftGodotRuntime
 import Foundation
 import OSLog
 #if canImport(Dispatch)

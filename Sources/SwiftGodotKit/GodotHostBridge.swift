@@ -1,5 +1,6 @@
 import Foundation
 import SwiftGodot
+import SwiftGodotRuntime
 
 @MainActor
 final class SwiftGodotHostBridge: Node {

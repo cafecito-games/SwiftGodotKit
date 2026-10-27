@@ -1,0 +1,24 @@
+{
+  "originHash" : "c06d3c76b559b50aff4e8f1501432e024a57178ce5b556e80fc2fbe4a6b1ede7",
+  "pins" : [
+    {
+      "identity" : "swift-syntax",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/swiftlang/swift-syntax",
+      "state" : {
+        "revision" : "0687f71944021d616d34d922343dcef086855920",
+        "version" : "600.0.1"
+      }
+    },
+    {
+      "identity" : "swiftgodotbinary",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/cafecito-games/SwiftGodotBinary",
+      "state" : {
+        "revision" : "b23285d01e77c989113c2f0d5bafa463d7d8e6fd",
+        "version" : "0.4.2"
+      }
+    }
+  ],
+  "version" : 3
+}

@@ -29,6 +29,31 @@ tasks:
     cmds:
       - swift build --product TrivialSample
 
+  test:runtime:
+    desc: Verify the SwiftGodotRuntime boundary (unit tests plus the headless fixture)
+    cmds:
+      - swift test --filter SwiftGodotRuntimeTests
+      - task: test:runtime:fixture
+
+  test:runtime:fixture:
+    desc: Build and run the headless fixture through only the SwiftGodotRuntime product
+    dir: RuntimeExample
+    cmds:
+      - cmd: |
+          set -o pipefail
+          mkdir -p build
+          swift package clean
+          swift build --product RuntimeExample --verbose 2>&1 | tee build/runtime-fixture-build.log
+          if grep -q 'Sources/SwiftGodotKit/' build/runtime-fixture-build.log; then
+            echo "error: the headless fixture build compiled SwiftGodotKit UI sources" >&2
+            exit 1
+          fi
+          if ! grep -q 'Sources/SwiftGodotRuntime/' build/runtime-fixture-build.log; then
+            echo "error: the headless fixture build log records no SwiftGodotRuntime compilation" >&2
+            exit 1
+          fi
+      - swift run RuntimeExample
+
   compatibility:check:
     desc: Check that the selected forks expose the APIs required by SwiftGodotKit
     silent: true
