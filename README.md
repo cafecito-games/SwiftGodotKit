@@ -162,9 +162,10 @@ Package releases use semantic versioning starting at `v0.1.0`. Trigger the
 **Release** workflow from the repository's Actions tab ("Run workflow") with a
 version such as `0.1.0` on `main`. The workflow then:
 
-1. validates the version and refuses one that already has a tag, or that an
-   existing tag in the same major range would shadow for range-based
-   consumers;
+1. validates the version — strict semver with an optional leading `v`; it
+   refuses versions containing `libgodot`, which are reserved for payload
+   releases, versions that already have a tag, and versions that an existing
+   tag in the same major range would shadow for range-based consumers;
 2. builds every product and runs the `SwiftGodotRuntime` tests;
 3. tags `main` and publishes a GitHub release with generated notes.
 
