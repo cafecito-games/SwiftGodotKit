@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+work_dir=$(mktemp -d)
+trap 'rm -rf "$work_dir"' EXIT
+sdk="$work_dir/sdk"
+mkdir -p "$sdk/bin" "$sdk/include"
+
+files=(
+    COPYRIGHT.txt
+    LICENSE.txt
+    bin/libgodot.ios.template_release.arm64.a
+    bin/libgodot.ios.template_release.arm64.simulator.a
+    bin/libgodot.macos.template_release.arm64.dylib
+    bin/libgodot.macos.template_release.x86_64.dylib
+    extension_api.json
+    include/gdextension_interface.gen.h
+    include/libgodot.h
+)
+for file in "${files[@]}"; do
+    printf 'fixture:%s\n' "$file" > "$sdk/$file"
+done
+
+cat > "$work_dir/lock.json" <<'EOF'
+{"customGodotCommit":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","godotCommit":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","godotVersion":"4.7.2.stable"}
+EOF
+
+files_json='{}'
+for file in "${files[@]}"; do
+    checksum=$(shasum -a 256 "$sdk/$file" | awk '{print $1}')
+    files_json=$(jq -cn --argjson files "$files_json" --arg file "$file" --arg checksum "$checksum" '$files + {($file): $checksum}')
+done
+jq -n --argjson files "$files_json" '{custom_godot_commit:"aaaaaaaaaa",godot_commit:"bbbbbbbbbb",godot_version:"4.7.2.stable",files:$files}' > "$sdk/BUILD_INFO.json"
+
+scripts/verify-custom-godot-sdk "$sdk" "$work_dir/lock.json" >/dev/null
+
+printf 'tampered\n' >> "$sdk/include/libgodot.h"
+if scripts/verify-custom-godot-sdk "$sdk" "$work_dir/lock.json" >/dev/null 2>&1; then
+    echo "expected checksum mismatch to fail" >&2
+    exit 1
+fi
+
+printf 'custom Godot SDK verification tests passed\n'

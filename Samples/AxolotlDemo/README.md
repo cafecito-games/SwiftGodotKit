@@ -35,7 +35,7 @@ To regenerate the pack and Xcode project:
 task
 ```
 
-The pack script uses `/Applications/Godot-47.app` by default. Set `GODOT_APP`
+The pack script uses `/Applications/Godot.app` by default. Set `GODOT_APP`
 to use a different Godot 4.7 application bundle.
 
 Build both destinations:

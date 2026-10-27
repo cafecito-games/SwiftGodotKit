@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+work_dir=$(mktemp -d)
+trap 'rm -rf "$work_dir"' EXIT
+mkdir -p "$work_dir/payload/nested"
+printf 'alpha\n' > "$work_dir/payload/a.txt"
+printf 'beta\n' > "$work_dir/payload/nested/b.txt"
+chmod 700 "$work_dir/payload/nested"
+chmod 600 "$work_dir/payload/a.txt" "$work_dir/payload/nested/b.txt"
+
+umask 077
+scripts/create-deterministic-zip "$work_dir/payload" "$work_dir/first.zip"
+touch "$work_dir/payload/a.txt" "$work_dir/payload/nested/b.txt"
+chmod 755 "$work_dir/payload/nested"
+chmod 644 "$work_dir/payload/a.txt" "$work_dir/payload/nested/b.txt"
+umask 022
+scripts/create-deterministic-zip "$work_dir/payload" "$work_dir/second.zip"
+
+first=$(shasum -a 256 "$work_dir/first.zip" | awk '{print $1}')
+second=$(shasum -a 256 "$work_dir/second.zip" | awk '{print $1}')
+[[ "$first" == "$second" ]] || {
+    echo "deterministic ZIP checksums differ: $first != $second" >&2
+    exit 1
+}
+
+unzip -q "$work_dir/first.zip" -d "$work_dir/extracted"
+cmp "$work_dir/payload/a.txt" "$work_dir/extracted/payload/a.txt"
+cmp "$work_dir/payload/nested/b.txt" "$work_dir/extracted/payload/nested/b.txt"
+echo "deterministic ZIP tests passed"

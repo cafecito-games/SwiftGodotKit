@@ -5,6 +5,8 @@ vars:
   CUSTOM_GODOT: '{{.CUSTOM_GODOT | default "../../custom-godot"}}'
   GODOT: '{{.GODOT | default (printf "%s/godot" .CUSTOM_GODOT)}}'
   OUTPUT: '{{.OUTPUT | default "build"}}'
+  LIBGODOT_SDK_LOCK: '{{.LIBGODOT_SDK_LOCK | default "config/libgodot-sdk.json"}}'
+  LIBGODOT_SDK: '{{.LIBGODOT_SDK | default (printf "%s/custom-godot-sdk" .OUTPUT)}}'
   RELEASE_REPO: '{{.RELEASE_REPO | default "cafecito-games/SwiftGodotKit"}}'
   GODOT_REPO: '{{.GODOT_REPO | default "cafecito-games/custom-godot"}}'
   JOBS:
@@ -36,15 +38,44 @@ tasks:
     cmds:
       - scripts/check-fork-compatibility
 
-  payload:package:
-    desc: Package existing release libgodot slices into Apple XCFrameworks
+  compatibility:sdk:
+    desc: Check Cafecito SwiftGodot against the locked published custom-Godot SDK
+    silent: true
+    env:
+      SWIFTGODOT_DIR: "{{.SWIFTGODOT}}"
+      GODOT_DIR: "{{.LIBGODOT_SDK}}"
+      LIBGODOT_SDK_LOCK: "{{.LIBGODOT_SDK_LOCK}}"
     cmds:
-      - scripts/make-libgodot.xcframework --configuration release "{{.SWIFTGODOT}}" "{{.GODOT}}" "{{.OUTPUT}}"
+      - scripts/check-fork-compatibility
 
-  payload:release:
-    desc: Build and package release libgodot slices
+  payload:fetch:
+    desc: Download and verify the locked custom-Godot Apple LibGodot SDK
+    cmds:
+      - scripts/fetch-custom-godot-sdk "{{.LIBGODOT_SDK_LOCK}}" "{{.LIBGODOT_SDK}}"
+
+  payload:package:
+    desc: Package the locked custom-Godot SDK into Apple XCFrameworks
+    cmds:
+      - LIBGODOT_SDK_LOCK="{{.LIBGODOT_SDK_LOCK}}" scripts/make-libgodot.xcframework --configuration release "{{.SWIFTGODOT}}" "{{.LIBGODOT_SDK}}" "{{.OUTPUT}}"
+
+  payload:build:
+    desc: Build release libgodot slices from a custom-Godot source checkout
     cmds:
       - scripts/make-libgodot.xcframework --build --configuration release --zip --jobs "{{.JOBS}}" "{{.SWIFTGODOT}}" "{{.GODOT}}" "{{.OUTPUT}}"
+
+  payload:release:
+    desc: Fetch the approved SDK and create release XCFramework payloads
+    cmds:
+      - task: payload:fetch
+        vars:
+          LIBGODOT_SDK_LOCK: "{{.LIBGODOT_SDK_LOCK}}"
+          LIBGODOT_SDK: "{{.LIBGODOT_SDK}}"
+      - task: compatibility:sdk
+        vars:
+          SWIFTGODOT: "{{.SWIFTGODOT}}"
+          LIBGODOT_SDK_LOCK: "{{.LIBGODOT_SDK_LOCK}}"
+          LIBGODOT_SDK: "{{.LIBGODOT_SDK}}"
+      - LIBGODOT_SDK_LOCK="{{.LIBGODOT_SDK_LOCK}}" scripts/make-libgodot.xcframework --configuration release --zip "{{.SWIFTGODOT}}" "{{.LIBGODOT_SDK}}" "{{.OUTPUT}}"
 
   payload:debug:
     desc: Build and package debug libgodot slices
@@ -54,7 +85,7 @@ tasks:
   payload:zip:
     desc: Zip existing release XCFrameworks and print SwiftPM checksums
     cmds:
-      - scripts/make-libgodot.xcframework --configuration release --zip "{{.SWIFTGODOT}}" "{{.GODOT}}" "{{.OUTPUT}}"
+      - LIBGODOT_SDK_LOCK="{{.LIBGODOT_SDK_LOCK}}" scripts/make-libgodot.xcframework --configuration release --zip "{{.SWIFTGODOT}}" "{{.LIBGODOT_SDK}}" "{{.OUTPUT}}"
 
   release:publish:
     desc: Publish existing payload zips and update Package.swift; set VERSION
@@ -64,7 +95,7 @@ tasks:
     env:
       RELEASE_PRERELEASE: '{{.RELEASE_PRERELEASE | default "0"}}'
     cmds:
-      - scripts/publish-libgodot-release "{{.VERSION}}" "{{.GODOT}}" "{{.CUSTOM_GODOT}}" "{{.OUTPUT}}" Package.swift "{{.RELEASE_REPO}}" "{{.GODOT_REPO}}"
+      - scripts/publish-libgodot-release "{{.VERSION}}" "{{.LIBGODOT_SDK}}" "{{.LIBGODOT_SDK_LOCK}}" "{{.OUTPUT}}" Package.swift "{{.RELEASE_REPO}}" "{{.GODOT_REPO}}"
 
   release:
     desc: Build, package, and publish libgodot payloads; set VERSION
@@ -72,18 +103,17 @@ tasks:
       - sh: test -n "{{.VERSION}}"
         msg: "Set VERSION, for example: task release VERSION=v0.1.0-libgodot.1"
     cmds:
-      - task: compatibility:check
       - task: payload:release
         vars:
           SWIFTGODOT: "{{.SWIFTGODOT}}"
-          GODOT: "{{.GODOT}}"
           OUTPUT: "{{.OUTPUT}}"
-          JOBS: "{{.JOBS}}"
+          LIBGODOT_SDK_LOCK: "{{.LIBGODOT_SDK_LOCK}}"
+          LIBGODOT_SDK: "{{.LIBGODOT_SDK}}"
       - task: release:publish
         vars:
           VERSION: "{{.VERSION}}"
-          CUSTOM_GODOT: "{{.CUSTOM_GODOT}}"
-          GODOT: "{{.GODOT}}"
+          LIBGODOT_SDK_LOCK: "{{.LIBGODOT_SDK_LOCK}}"
+          LIBGODOT_SDK: "{{.LIBGODOT_SDK}}"
           OUTPUT: "{{.OUTPUT}}"
           RELEASE_REPO: "{{.RELEASE_REPO}}"
           GODOT_REPO: "{{.GODOT_REPO}}"

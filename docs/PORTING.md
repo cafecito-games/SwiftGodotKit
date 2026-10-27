@@ -5,7 +5,11 @@ Cafecito SwiftGodot, and Cafecito Godot.
 
 ## Completed in this repository
 
-- SwiftPM now resolves `cafecito-games/SwiftGodot` v0.4.0.
+- SwiftPM resolves the exact public `cafecito-games/SwiftGodotBinary` v0.4.2
+  package, avoiding source SwiftGodot and its binding generators. SwiftGodot
+  and GDExtensionC are binary targets; the macro implementation and its
+  SwiftSyntax dependency build from exact release sources because SwiftPM does
+  not yet support prebuilt third-party compiler macros.
 - Runtime SPI imports use the consolidated `SwiftGodot` module.
 - The removed `GDExtension` module import has been eliminated.
 - Godot object access is main-actor isolated to match SwiftGodot's
@@ -15,8 +19,12 @@ Cafecito SwiftGodot, and Cafecito Godot.
   notes retain both the custom-Godot orchestrator commit and upstream engine
   base commit as provenance.
 - iOS builds use Cafecito Godot's `ios_simulator=yes` SCons option.
+- Apple libgodot payloads are published from custom-Godot release
+  `v4.7.2-20261026.1` and record orchestrator commit
+  `8c7cff31a7cf9412447ee51ff9a6fde8137ae67f` plus Godot base commit
+  `ed1daf0bf001b61586d9930840f2f1394092c079`.
 
-## Required in custom Godot
+## Custom Godot contract
 
 Godot 4.7.2 already provides:
 
@@ -48,8 +56,10 @@ The reference implementation is the following ordered commit series on
 8. `324455d4e7` — expose embedded display classes in API dumps
 9. `4c95248ac7` — SDL device checks for static iOS libgodot
 
-Port the behavior rather than blindly merging the branch: it is based on
-Godot 4.7.3-rc, while Cafecito targets 4.7.2 and applies its own patchers.
+The port is delivered by Cafecito custom-Godot release
+`v4.7.2-20261026.1`. The historical reference series is retained above to
+explain the runtime contract; Cafecito targets 4.7.2 rather than that branch's
+Godot 4.7.3-rc base.
 
 SwiftGodotKit dynamically binds these classes and methods, so their names and
 signatures are part of the runtime contract:
@@ -75,16 +85,18 @@ API so SwiftGodot and engine builds can be validated from the same source.
 - all seven C symbols above are exported;
 - the archive does not export `_main`;
 - no standalone `app.*.o` object is present; and
-- device and available simulator slices are packaged into one XCFramework.
+- exact device and simulator architectures are packaged into one XCFramework.
 
-After custom-Godot support lands, run:
+For the locked custom-Godot SDK release, run:
 
 ```sh
-task compatibility:check
 task payload:release
 task build
 task build:sample
 ```
 
-Then publish a prerelease payload, update `Package.swift`, and test both the
+`payload:release` fetches and verifies `config/libgodot-sdk.json`; use
+`payload:build` for an explicitly local source build. Publication also checks a
+provenance stamp binding the ZIP checksums to the locked SDK. Then publish a
+payload, update `Package.swift`, and test both the
 Axolotl macOS target and iOS Simulator target before declaring the fork stable.

@@ -28,13 +28,13 @@ tasks:
     desc: Build the generated macOS app
     deps: [pck, project]
     cmds:
-      - xcodebuild -project AxolotlDemo.xcodeproj -scheme AxolotlDemo-macOS -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO build
+      - xcodebuild -project AxolotlDemo.xcodeproj -scheme AxolotlDemo-macOS -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO -skipMacroValidation build
 
   build:ios-simulator:
     desc: Build the generated iOS Simulator app
     deps: [pck, project]
     cmds:
-      - xcodebuild -project AxolotlDemo.xcodeproj -scheme AxolotlDemo-iOS -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
+      - xcodebuild -project AxolotlDemo.xcodeproj -scheme AxolotlDemo-iOS -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO EXCLUDED_ARCHS=x86_64 -skipMacroValidation build
 
   clean:
     desc: Clean all generated Xcode targets

@@ -176,7 +176,6 @@
 				};
 			};
 			buildConfigurationList = 2CFCA517A3B31C3513DB0748 /* Build configuration list for PBXProject "AxolotlDemo" */;
-			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -189,6 +188,7 @@
 				4F56E8F6083FB5EE7C519049 /* XCLocalSwiftPackageReference "../.." */,
 			);
 			preferredProjectObjectVersion = 77;
+			productRefGroup = D6FD747A9E3B4E2CAD2DB69C /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -312,6 +312,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Axolotl Demo";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -447,6 +448,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Axolotl Demo";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;

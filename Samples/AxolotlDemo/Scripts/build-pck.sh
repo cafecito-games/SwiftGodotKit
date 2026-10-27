@@ -8,7 +8,7 @@ package_dir=$(cd "$sample_dir/../.." && pwd)
 godot_project="$sample_dir/GodotProject"
 app_resources="$sample_dir/Resources"
 package_resources="$package_dir/Sources/TrivialSample"
-godot_app="${GODOT_APP:-/Applications/Godot-47.app}"
+godot_app="${GODOT_APP:-/Applications/Godot.app}"
 godot_binary="$godot_app/Contents/MacOS/Godot"
 
 if [[ ! -x "$godot_binary" ]]; then

@@ -1,8 +1,9 @@
 # Standalone example
 
 This Swift package uses the local SwiftGodotKit checkout and Cafecito
-SwiftGodot v0.4.0. SwiftGodotKit downloads its libgodot XCFrameworks through
-SwiftPM.
+SwiftGodotBinary v0.4.2. SwiftGodotKit downloads the matching Cafecito
+libgodot XCFrameworks through SwiftPM. Both package manifests use the same
+exact binary dependency, so the executable contains one SwiftGodot runtime.
 
 Then build and run the macOS example:
 
