@@ -1,0 +1,8 @@
+; Engine configuration file.
+; Minimal project for the SwiftGodotRuntime headless fixture.
+config_version=5
+
+[application]
+
+config/name="SwiftGodotRuntimeHeadlessFixture"
+run/main_scene="res://main.tscn"

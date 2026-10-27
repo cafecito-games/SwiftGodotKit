@@ -23,6 +23,9 @@ let package = Package(
         .library(
             name: "SwiftGodotKit",
             targets: ["SwiftGodotKit"]),
+        .library(
+            name: "SwiftGodotRuntime",
+            targets: ["SwiftGodotRuntime"]),
         .executable(name: "TrivialSample", targets: ["TrivialSample"]),
     ],
     dependencies: [
@@ -31,14 +34,30 @@ let package = Package(
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
         // Targets can depend on other targets in this package and products from dependencies.
+
+        // The lightweight embedded-instance boundary: SwiftGodot plus the
+        // pinned libgodot payloads, with no UI hosting sources. This target is
+        // the single owner of the libgodot binary metadata and C declarations.
         .target(
-            name: "SwiftGodotKit",
+            name: "SwiftGodotRuntime",
             dependencies: [
                 .product(name: "SwiftGodot", package: "SwiftGodotBinary"),
                 "libgodot",
                 .target(name: "apple_plugin_stubs", condition: .when(platforms: [.iOS])),
                 .target(name: "mac_libgodot", condition: .when(platforms: [.macOS])),
                 .target(name: "ios_libgodot", condition: .when(platforms: [.iOS])),
+            ]
+        ),
+
+        // The SwiftUI/AppKit/UIKit view-hosting product. It keeps every UI,
+        // lifecycle, routing, and sample behavior and builds on the runtime
+        // target for instance creation and destruction.
+        .target(
+            name: "SwiftGodotKit",
+            dependencies: [
+                .product(name: "SwiftGodot", package: "SwiftGodotBinary"),
+                .target(name: "SwiftGodotRuntime"),
+                "libgodot",
             ]
         ),
 
@@ -63,6 +82,10 @@ let package = Package(
         iosLibgodotTarget,
         .systemLibrary(
             name: "libgodot"
+        ),
+        .testTarget(
+            name: "SwiftGodotRuntimeTests",
+            dependencies: ["SwiftGodotRuntime"]
         ),
     ],
     swiftLanguageModes: [.v5]

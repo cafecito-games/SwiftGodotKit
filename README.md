@@ -71,6 +71,60 @@ swift package resolve
 The exact pin is intentional: SwiftGodot's compiled Swift ABI, generated Godot
 API, macro sources, and GDExtension C module must come from one release.
 
+## Choosing a product
+
+The package exposes two library products:
+
+- **`SwiftGodotRuntime`** — the lightweight embedded-instance boundary for
+  headless and command-line consumers such as asset exporters and CI tooling.
+  It creates, starts, and destroys a Godot instance through libgodot and
+  depends only on SwiftGodot plus the pinned libgodot payloads; it compiles no
+  SwiftUI/AppKit/UIKit hosting code. This is the seam UzirEdit's asset-pack
+  exporter and any other standalone tool should depend on.
+- **`SwiftGodotKit`** — the native view-hosting product. It keeps the
+  `GodotApp` application lifecycle, `GodotAppView` windows, message routing,
+  and display-server integration, and builds on `SwiftGodotRuntime` for
+  instance creation and destruction. Existing `import SwiftGodotKit` consumers
+  keep compiling unchanged: the runtime boundary and the `initHookCb` /
+  `deinitHookCb` hooks are re-exported from this target.
+
+Lifecycle ownership lives entirely in the runtime target. Every instance —
+headless or UI-hosted — is created and destroyed through
+`GodotRuntime.createInstance(args:initHook:deinitHook:)` /
+`GodotRuntime.destroyInstance(_:)`, and every initialization hook is composed
+by that one authority: the module-scope compatibility hooks run first, then
+the per-instance hooks. A failed creation returns `nil` and needs no
+compensating cleanup; a successful instance must be destroyed exactly once.
+
+One executable must contain exactly one SwiftGodot module/runtime and the
+platform-appropriate libgodot payload. Both products resolve the same pinned
+targets, so mixing them in one dependency graph does not duplicate binaries —
+but do not also depend on source `SwiftGodot` (see above).
+
+## Headless example
+
+`RuntimeExample` is a fresh macOS command-line package that depends only on
+the `SwiftGodotRuntime` product:
+
+```swift
+import SwiftGodotRuntime
+
+guard let instance = GodotRuntime.createInstance(args: ["--headless", "--path", projectPath]) else {
+    fatalError("embedded Godot could not create an instance")
+}
+defer { GodotRuntime.destroyInstance(instance) }
+instance.start()
+```
+
+The fixture bundles a minimal Godot project, starts the instance, runs a few
+main-loop iterations, and destroys it cleanly. Run the whole gate — unit
+tests, the fixture, and a build-plan assertion that no UI sources are
+compiled — with:
+
+```sh
+task test:runtime
+```
+
 ## SwiftUI example
 
 Add an exported Godot PCK to the application bundle, then create one
@@ -103,6 +157,7 @@ This repository uses [Task](https://taskfile.dev) rather than Make.
 task                    # list tasks
 task build              # build the library
 task build:sample       # build TrivialSample
+task test:runtime       # runtime unit tests plus the headless fixture gate
 task sample             # PCK + Xcode project
 task sample:macos
 task sample:ios-simulator
