@@ -51,6 +51,7 @@ private struct AxolotlGameView: View {
     }
 }
 
+@MainActor
 @Observable
 private final class AxolotlGameState {
     private(set) var score = 0

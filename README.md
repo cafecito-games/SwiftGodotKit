@@ -8,7 +8,7 @@ This is Cafecito Games' hard fork of
 It targets these exact binary/runtime inputs:
 
 - [cafecito-games/SwiftGodotBinary](https://github.com/cafecito-games/SwiftGodotBinary)
-  v0.4.1, produced by the matching Cafecito SwiftGodot release;
+  v0.4.2, produced by the matching Cafecito SwiftGodot release;
 - [Cafecito Godot v4.7.2-20261026.1](https://github.com/cafecito-games/custom-godot/releases/tag/v4.7.2-20261026.1)
   with Godot base commit `ed1daf0bf001b61586d9930840f2f1394092c079`; and
 - Swift 6.3 or later, compiling this package in Swift 5 language mode.
@@ -23,7 +23,7 @@ the main actor used by SwiftGodot's engine-thread executor.
 SwiftPM downloads both SwiftGodot and libgodot from public, immutable Cafecito
 releases. The libgodot payloads are derived from the checksum-locked custom
 Godot SDK and published in
-[v4.7.2-20261026.1-libgodot.1](https://github.com/cafecito-games/SwiftGodotKit/releases/tag/v4.7.2-20261026.1-libgodot.1).
+[v4.7.2-20261026.1-libgodot.2](https://github.com/cafecito-games/SwiftGodotKit/releases/tag/v4.7.2-20261026.1-libgodot.2).
 
 Run the contract check at any time:
 
@@ -50,8 +50,14 @@ Then add the product to the app target:
 ```
 
 The package already resolves the exact `cafecito-games/SwiftGodotBinary`
-v0.4.1 package. Do not also depend on source `SwiftGodot`; one executable must
+v0.4.2 package. Do not also depend on source `SwiftGodot`; one executable must
 contain exactly one SwiftGodot module/runtime.
+
+SwiftGodot and GDExtensionC arrive as prebuilt XCFrameworks. SwiftPM builds the
+small `SwiftGodotMacroLibrary` target from its exact release sources, which
+introduces the intentional `swift-syntax` dependency. This avoids compiling
+SwiftGodot's generated bindings and generators while using SwiftPM's supported
+compiler-macro model.
 
 When moving an existing checkout from source SwiftGodot to this binary release,
 discard the old resolution and build products before resolving again:
@@ -63,7 +69,7 @@ swift package resolve
 ```
 
 The exact pin is intentional: SwiftGodot's compiled Swift ABI, generated Godot
-API, macro executable, and GDExtension C module must come from one release.
+API, macro sources, and GDExtension C module must come from one release.
 
 ## SwiftUI example
 
@@ -135,7 +141,7 @@ To publish the payloads on this repository and rewrite their URLs/checksums in
 `Package.swift`:
 
 ```sh
-task release:publish VERSION=v4.7.2-20261026.1-libgodot.1
+task release:publish VERSION=v4.7.2-20261026.1-libgodot.2
 ```
 
 Use a fresh tag for every payload because SwiftPM caches binary-target URLs.

@@ -337,7 +337,9 @@ public class GodotApp: ObservableObject {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            self?.applicationDidBecomeActive()
+            Task { @MainActor [weak self] in
+                self?.applicationDidBecomeActive()
+            }
         }
 
         let willResignActive = center.addObserver(
@@ -345,7 +347,9 @@ public class GodotApp: ObservableObject {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            self?.applicationDidResignActive()
+            Task { @MainActor [weak self] in
+                self?.applicationDidResignActive()
+            }
         }
 
         let didEnterBackground = center.addObserver(
@@ -353,7 +357,9 @@ public class GodotApp: ObservableObject {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            self?.applicationDidEnterBackground()
+            Task { @MainActor [weak self] in
+                self?.applicationDidEnterBackground()
+            }
         }
 
         let willEnterForeground = center.addObserver(
@@ -361,7 +367,9 @@ public class GodotApp: ObservableObject {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            self?.applicationWillEnterForeground()
+            Task { @MainActor [weak self] in
+                self?.applicationWillEnterForeground()
+            }
         }
 
         lifecycleObservers = [didBecomeActive, willResignActive, didEnterBackground, willEnterForeground]

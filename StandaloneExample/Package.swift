@@ -15,8 +15,8 @@ let package = Package(
             targets: ["StandaloneExample"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/cafecito-games/SwiftGodotBinary", exact: "0.4.1"),
-        .package(path: "..")
+        .package(url: "https://github.com/cafecito-games/SwiftGodotBinary", exact: "0.4.2"),
+        .package(name: "SwiftGodotKit", path: "..")
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
@@ -25,7 +25,7 @@ let package = Package(
             name: "StandaloneExample",
             dependencies: [
                 .product(name: "SwiftGodot", package: "SwiftGodotBinary"),
-                "SwiftGodotKit",
+                .product(name: "SwiftGodotKit", package: "SwiftGodotKit"),
             ]),
         .testTarget(
             name: "StandaloneExampleTests",

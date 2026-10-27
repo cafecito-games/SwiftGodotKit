@@ -89,10 +89,8 @@ fi
 
 if [[ -f "$GODOT_DIR/include/libgodot.h" && -f "$GODOT_DIR/BUILD_INFO.json" ]]; then
     INPUT_KIND=sdk
-    HEADERS_SOURCE_DIR="$GODOT_DIR/include"
 elif [[ -f "$GODOT_DIR/core/extension/libgodot.h" ]]; then
     INPUT_KIND=source
-    HEADERS_SOURCE_DIR="$GODOT_DIR/core/extension"
 else
     echo "error: expected a custom-Godot SDK or source tree at $GODOT_DIR" >&2
     exit 1
@@ -247,6 +245,19 @@ verify_macos_dylib() {
     verify_exact_architectures "$dylib" "$expected_arch"
 }
 
+verify_headerless_xcframework() {
+    local framework="$1"
+
+    # SwiftGodotKit exposes its namespaced C declarations through the separate
+    # libgodot system-library target. Shipping Godot's own libgodot.h in this
+    # binary target makes Xcode flatten it into the shared product include
+    # directory, where GDExtensionC's umbrella module imports it by accident.
+    if find "$framework" -type d -name Headers -print -quit | grep -q .; then
+        echo "error: $framework must not contain headers" >&2
+        exit 1
+    fi
+}
+
 replace_framework() {
     local staged="$1"
     local destination="$2"
@@ -328,14 +339,6 @@ mkdir -p "$OUTPUT_DIR/mac" "$OUTPUT_DIR/ios"
 PACKAGING_TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$PACKAGING_TMP_DIR"' EXIT
 
-HEADERS_DIR="$PACKAGING_TMP_DIR/headers"
-mkdir -p "$HEADERS_DIR"
-
-cp "$HEADERS_SOURCE_DIR/libgodot.h" "$HEADERS_DIR/libgodot.h"
-if [[ -f "$HEADERS_SOURCE_DIR/gdextension_interface.gen.h" ]]; then
-    cp "$HEADERS_SOURCE_DIR/gdextension_interface.gen.h" "$HEADERS_DIR/gdextension_interface.gen.h"
-fi
-
 select_artifacts
 
 echo "Packaging macOS libgodot..."
@@ -353,8 +356,8 @@ if [[ -f "$MAC_ARM_LIB" && -f "$MAC_X86_LIB" ]]; then
     MAC_FRAMEWORK="$PACKAGING_TMP_DIR/libgodot-macos.xcframework"
     xcodebuild -create-xcframework \
         -library "$UNIVERSAL_LIB" \
-        -headers "$HEADERS_DIR" \
         -output "$MAC_FRAMEWORK"
+    verify_headerless_xcframework "$MAC_FRAMEWORK"
     replace_framework "$MAC_FRAMEWORK" "$OUTPUT_DIR/mac/libgodot.xcframework"
 else
     cat <<EOF
@@ -405,16 +408,14 @@ if [[ -f "$IOS_DEVICE_LIB" ]]; then
     if [[ -n "$IOS_SIM_TMP" ]]; then
         xcodebuild -create-xcframework \
             -library "$IOS_DEVICE_TMP" \
-            -headers "$HEADERS_DIR" \
             -library "$IOS_SIM_TMP" \
-            -headers "$HEADERS_DIR" \
             -output "$IOS_FRAMEWORK"
     else
         xcodebuild -create-xcframework \
             -library "$IOS_DEVICE_TMP" \
-            -headers "$HEADERS_DIR" \
             -output "$IOS_FRAMEWORK"
     fi
+    verify_headerless_xcframework "$IOS_FRAMEWORK"
     replace_framework "$IOS_FRAMEWORK" "$OUTPUT_DIR/ios/libgodot.xcframework"
 else
     cat <<EOF

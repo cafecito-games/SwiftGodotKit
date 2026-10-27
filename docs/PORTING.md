@@ -5,8 +5,11 @@ Cafecito SwiftGodot, and Cafecito Godot.
 
 ## Completed in this repository
 
-- SwiftPM resolves the exact public `cafecito-games/SwiftGodotBinary` v0.4.1
-  package, avoiding source SwiftGodot, SwiftSyntax, and binding generators.
+- SwiftPM resolves the exact public `cafecito-games/SwiftGodotBinary` v0.4.2
+  package, avoiding source SwiftGodot and its binding generators. SwiftGodot
+  and GDExtensionC are binary targets; the macro implementation and its
+  SwiftSyntax dependency build from exact release sources because SwiftPM does
+  not yet support prebuilt third-party compiler macros.
 - Runtime SPI imports use the consolidated `SwiftGodot` module.
 - The removed `GDExtension` module import has been eliminated.
 - Godot object access is main-actor isolated to match SwiftGodot's

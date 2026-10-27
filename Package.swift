@@ -2,14 +2,14 @@
 import PackageDescription
 let macLibgodotTarget: Target = .binaryTarget(
     name: "mac_libgodot",
-    url: "https://github.com/cafecito-games/SwiftGodotKit/releases/download/v4.7.2-20261026.1-libgodot.1/libgodot-macos.xcframework.zip",
-    checksum: "1c189a4f5a8974779b7b7561ff9e0cf2da8d499c9747f116ef1e465d694c1a32"
+    url: "https://github.com/cafecito-games/SwiftGodotKit/releases/download/v4.7.2-20261026.1-libgodot.2/libgodot-macos.xcframework.zip",
+    checksum: "6924ee56143baae80d062afee3f6afb227f0a00e2082c642a7ce163fd40e9335"
 )
 
 let iosLibgodotTarget: Target = .binaryTarget(
     name: "ios_libgodot",
-    url: "https://github.com/cafecito-games/SwiftGodotKit/releases/download/v4.7.2-20261026.1-libgodot.1/libgodot-ios.xcframework.zip",
-    checksum: "eeaa323f5450a4c7e3f7004494a85220260981b04d70683f0d3bd85669040456"
+    url: "https://github.com/cafecito-games/SwiftGodotKit/releases/download/v4.7.2-20261026.1-libgodot.2/libgodot-ios.xcframework.zip",
+    checksum: "25242eecaee94043592636eadaf317893d36f3e78c3447d4de5fe9b2c3d8ec6d"
 )
 
 let package = Package(
@@ -26,7 +26,7 @@ let package = Package(
         .executable(name: "TrivialSample", targets: ["TrivialSample"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/cafecito-games/SwiftGodotBinary", exact: "0.4.1"),
+        .package(url: "https://github.com/cafecito-games/SwiftGodotBinary", exact: "0.4.2"),
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
