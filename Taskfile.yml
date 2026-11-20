@@ -2,13 +2,12 @@ version: "3"
 
 vars:
   SWIFTGODOT: '{{.SWIFTGODOT | default "../SwiftGodot"}}'
-  CUSTOM_GODOT: '{{.CUSTOM_GODOT | default "../../custom-godot"}}'
-  GODOT: '{{.GODOT | default (printf "%s/godot" .CUSTOM_GODOT)}}'
+  GODOT: '{{.GODOT | default "../godot"}}'
   OUTPUT: '{{.OUTPUT | default "build"}}'
   LIBGODOT_SDK_LOCK: '{{.LIBGODOT_SDK_LOCK | default "config/libgodot-sdk.json"}}'
-  LIBGODOT_SDK: '{{.LIBGODOT_SDK | default (printf "%s/custom-godot-sdk" .OUTPUT)}}'
+  LIBGODOT_SDK: '{{.LIBGODOT_SDK | default (printf "%s/godot-sdk" .OUTPUT)}}'
   RELEASE_REPO: '{{.RELEASE_REPO | default "cafecito-games/SwiftGodotKit"}}'
-  GODOT_REPO: '{{.GODOT_REPO | default "cafecito-games/custom-godot"}}'
+  GODOT_REPO: '{{.GODOT_REPO | default "cafecito-games/godot"}}'
   JOBS:
     sh: sysctl -n hw.logicalcpu 2>/dev/null || echo 8
 
@@ -64,7 +63,7 @@ tasks:
       - scripts/check-fork-compatibility
 
   compatibility:sdk:
-    desc: Check Cafecito SwiftGodot against the locked published custom-Godot SDK
+    desc: Check Cafecito SwiftGodot against the locked published Cafecito Godot SDK
     silent: true
     env:
       SWIFTGODOT_DIR: "{{.SWIFTGODOT}}"
@@ -74,17 +73,17 @@ tasks:
       - scripts/check-fork-compatibility
 
   payload:fetch:
-    desc: Download and verify the locked custom-Godot Apple LibGodot SDK
+    desc: Download and verify the locked Cafecito Godot Apple LibGodot SDK
     cmds:
-      - scripts/fetch-custom-godot-sdk "{{.LIBGODOT_SDK_LOCK}}" "{{.LIBGODOT_SDK}}"
+      - scripts/fetch-godot-sdk "{{.LIBGODOT_SDK_LOCK}}" "{{.LIBGODOT_SDK}}"
 
   payload:package:
-    desc: Package the locked custom-Godot SDK into Apple XCFrameworks
+    desc: Package the locked Cafecito Godot SDK into Apple XCFrameworks
     cmds:
       - LIBGODOT_SDK_LOCK="{{.LIBGODOT_SDK_LOCK}}" scripts/make-libgodot.xcframework --configuration release "{{.SWIFTGODOT}}" "{{.LIBGODOT_SDK}}" "{{.OUTPUT}}"
 
   payload:build:
-    desc: Build release libgodot slices from a custom-Godot source checkout
+    desc: Build release libgodot slices from a Cafecito Godot source checkout
     cmds:
       - scripts/make-libgodot.xcframework --build --configuration release --zip --jobs "{{.JOBS}}" "{{.SWIFTGODOT}}" "{{.GODOT}}" "{{.OUTPUT}}"
 

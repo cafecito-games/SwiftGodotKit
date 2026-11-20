@@ -31,7 +31,7 @@ Run the contract check at any time:
 task compatibility:sdk
 ```
 
-Use `task compatibility:check` instead when validating a local custom-Godot
+Use `task compatibility:check` instead when validating a local Cafecito Godot
 source checkout.
 
 ## Add the package
@@ -192,19 +192,19 @@ The default checkout layout is:
 ```text
 ~/CafecitoGames/SwiftGodotKit
 ~/CafecitoGames/SwiftGodot
-~/custom-godot/godot
+~/CafecitoGames/godot
 ```
 
 Override any path when needed:
 
 ```sh
 task build SWIFTGODOT=/path/to/SwiftGodot
-task compatibility:check GODOT=/path/to/custom-godot/godot
+task compatibility:check GODOT=/path/to/godot
 ```
 
 ## Build and publish libgodot payloads
 
-The approved custom-Godot release and SDK checksum are pinned in
+The approved Cafecito Godot release and SDK checksum are pinned in
 `config/libgodot-sdk.json`. To fetch, verify, and package that SDK:
 
 ```sh
@@ -213,7 +213,7 @@ task payload:release
 
 This downloads the locked Apple SDK, verifies its release commit, archive
 checksum, manifest, and every file, then creates reproducible XCFramework ZIPs
-under `build/`. Use `task payload:build` only when testing a local custom-Godot
+under `build/`. Use `task payload:build` only when testing a local Cafecito Godot
 source checkout; source-built payloads cannot be published as the locked SDK.
 
 To publish the payloads on this repository and rewrite their URLs/checksums in
@@ -226,7 +226,7 @@ task release:publish VERSION=v4.7.2-20261026.1-libgodot.2
 Use a fresh tag for every payload because SwiftPM caches binary-target URLs.
 Set `RELEASE_PRERELEASE=1` for a prerelease. `RELEASE_REPO`, `GODOT_REPO`,
 `LIBGODOT_SDK`, `LIBGODOT_SDK_LOCK`, and `OUTPUT` are overrideable Task
-variables. `CUSTOM_GODOT` and `GODOT` apply only to source-build and
+variables. `GODOT` applies only to source-build and
 compatibility tasks.
 
 The original MIT license and attribution are retained in [LICENSE](LICENSE).
