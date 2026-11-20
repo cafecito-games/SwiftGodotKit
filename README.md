@@ -9,8 +9,9 @@ It targets these exact binary/runtime inputs:
 
 - [cafecito-games/SwiftGodotBinary](https://github.com/cafecito-games/SwiftGodotBinary)
   v0.4.2, produced by the matching Cafecito SwiftGodot release;
-- [Cafecito Godot v4.7.2-20261120.4](https://github.com/cafecito-games/godot/releases/tag/v4.7.2-20261120.4)
-  built from fork commit `706f49aa1452308086f8c401e3f37daa2b99a313`; and
+- the [Cafecito Godot](https://github.com/cafecito-games/godot) release pinned in
+  `config/libgodot-sdk.json`, which is the only place the engine's tag, commit,
+  and SDK checksum are recorded; and
 - Swift 6.3 or later, compiling this package in Swift 5 language mode.
 
 ## Fork status
@@ -207,7 +208,11 @@ task compatibility:check GODOT=/path/to/godot
 ## Build and publish libgodot payloads
 
 The approved Cafecito Godot release and SDK checksum are pinned in
-`config/libgodot-sdk.json`. To fetch, verify, and package that SDK:
+`config/libgodot-sdk.json`. Move to a newer engine release with
+`task payload:pin TAG=v4.7.2-20261120.4`, which rewrites that lock from the
+release itself: the commit comes from the tag ref and the checksum from the
+release's own `SHA256SUMS.txt`, cross-checked against the digest GitHub
+computed for the asset. To fetch, verify, and package the locked SDK:
 
 ```sh
 task payload:release

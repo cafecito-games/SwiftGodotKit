@@ -18,9 +18,8 @@ Cafecito SwiftGodot, and Cafecito Godot.
 - Payload publishing targets `cafecito-games/SwiftGodotKit`, while release
   notes retain the Cafecito Godot fork commit as provenance.
 - iOS builds use Cafecito Godot's `ios_simulator=yes` SCons option.
-- Apple libgodot payloads are published from Cafecito Godot release
-  `v4.7.2-20261120.4` and record fork commit
-  `706f49aa1452308086f8c401e3f37daa2b99a313`.
+- Apple libgodot payloads are published from the Cafecito Godot release pinned
+  in `config/libgodot-sdk.json`, and record its fork commit.
 
 ## Cafecito Godot contract
 
@@ -54,8 +53,8 @@ The reference implementation is the following ordered commit series on
 8. `324455d4e7` — expose embedded display classes in API dumps
 9. `4c95248ac7` — SDL device checks for static iOS libgodot
 
-The port is delivered by Cafecito Godot release
-`v4.7.2-20261120.4`. The historical reference series is retained above to
+The port is delivered by the Cafecito Godot release pinned in
+`config/libgodot-sdk.json`. The historical reference series is retained above to
 explain the runtime contract; Cafecito targets 4.7.2 rather than that branch's
 Godot 4.7.3-rc base.
 

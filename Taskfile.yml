@@ -72,6 +72,15 @@ tasks:
     cmds:
       - scripts/check-fork-compatibility
 
+  payload:pin:
+    desc: Pin a published Cafecito Godot release in the SDK lock; set TAG
+    silent: true
+    preconditions:
+      - sh: test -n "{{.TAG}}"
+        msg: "Set TAG, for example: task payload:pin TAG=v4.7.2-20261120.4"
+    cmds:
+      - LIBGODOT_SDK_LOCK="{{.LIBGODOT_SDK_LOCK}}" scripts/update-godot-sdk-pin "{{.TAG}}" "{{.GODOT_REPO}}"
+
   payload:fetch:
     desc: Download and verify the locked Cafecito Godot Apple LibGodot SDK
     cmds:
