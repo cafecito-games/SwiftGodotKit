@@ -29,31 +29,29 @@ for file in "$mac_zip" "$ios_zip" "$provenance_file" "$package_file"; do
     fi
 done
 
-scripts/verify-custom-godot-sdk "$sdk_dir" "$sdk_lock"
+scripts/verify-godot-sdk "$sdk_dir" "$sdk_lock"
 locked_repository=$(jq -er '.repository' "$sdk_lock")
-godot_sha=$(jq -er '.godotCommit' "$sdk_lock")
-custom_godot_sha=$(jq -er '.customGodotCommit' "$sdk_lock")
-custom_godot_tag=$(jq -er '.tag' "$sdk_lock")
-custom_godot_asset=$(jq -er '.asset' "$sdk_lock")
-custom_godot_asset_sha=$(jq -er '.sha256' "$sdk_lock")
+cafecito_godot_sha=$(jq -er '.cafecitoGodotCommit' "$sdk_lock")
+cafecito_godot_tag=$(jq -er '.tag' "$sdk_lock")
+cafecito_godot_asset=$(jq -er '.asset' "$sdk_lock")
+cafecito_godot_asset_sha=$(jq -er '.sha256' "$sdk_lock")
 if [[ "$godot_repo" != "$locked_repository" ]]; then
     echo "Godot repository $godot_repo does not match SDK lock $locked_repository" >&2
     exit 1
 fi
-gh api "repos/$godot_repo/commits/$custom_godot_sha" --jq .sha >/dev/null
+gh api "repos/$godot_repo/commits/$cafecito_godot_sha" --jq .sha >/dev/null
 mac_checksum=$(swift package compute-checksum "$mac_zip")
 ios_checksum=$(swift package compute-checksum "$ios_zip")
 
 jq -e \
     --arg repository "$(jq -er '.repository' "$sdk_lock")" \
-    --arg tag "$custom_godot_tag" \
-    --arg asset "$custom_godot_asset" \
-    --arg sdkSha256 "$custom_godot_asset_sha" \
-    --arg customGodotCommit "$custom_godot_sha" \
-    --arg godotCommit "$godot_sha" \
+    --arg tag "$cafecito_godot_tag" \
+    --arg asset "$cafecito_godot_asset" \
+    --arg sdkSha256 "$cafecito_godot_asset_sha" \
+    --arg cafecitoGodotCommit "$cafecito_godot_sha" \
     --arg macSha256 "$mac_checksum" \
     --arg iosSha256 "$ios_checksum" \
-    '.schemaVersion == 1 and .inputKind == "locked-sdk" and .repository == $repository and .tag == $tag and .asset == $asset and .sdkSha256 == $sdkSha256 and .customGodotCommit == $customGodotCommit and .godotCommit == $godotCommit and .macSha256 == $macSha256 and .iosSha256 == $iosSha256' \
+    '.schemaVersion == 2 and .inputKind == "locked-sdk" and .repository == $repository and .tag == $tag and .asset == $asset and .sdkSha256 == $sdkSha256 and .cafecitoGodotCommit == $cafecitoGodotCommit and .macSha256 == $macSha256 and .iosSha256 == $iosSha256' \
     "$provenance_file" >/dev/null || {
         echo "Payload provenance does not match the locked SDK or payload ZIPs" >&2
         exit 1
@@ -72,9 +70,8 @@ replace_package_manifest() {
     package_manifest_temp=""
 }
 
-echo "Godot commit: $godot_sha"
-echo "Custom Godot commit: $custom_godot_sha"
-echo "Custom Godot release: $custom_godot_tag/$custom_godot_asset ($custom_godot_asset_sha)"
+echo "Cafecito Godot commit: $cafecito_godot_sha"
+echo "Cafecito Godot release: $cafecito_godot_tag/$cafecito_godot_asset ($cafecito_godot_asset_sha)"
 echo "macOS checksum: $mac_checksum"
 echo "iOS checksum: $ios_checksum"
 
@@ -155,10 +152,10 @@ if [[ -z $notes_file ]]; then
     temporary_notes=$(mktemp)
     notes_file=$temporary_notes
     cat > "$notes_file" <<EOF
-SwiftGodotKit Apple libgodot payloads built from Godot commit $godot_sha.
-Custom Godot source: https://github.com/$godot_repo/commit/$custom_godot_sha
-Custom Godot SDK: https://github.com/$godot_repo/releases/tag/$custom_godot_tag
-Source SDK asset SHA-256: $custom_godot_asset_sha
+SwiftGodotKit Apple libgodot payloads built from Cafecito Godot commit $cafecito_godot_sha.
+Cafecito Godot source: https://github.com/$godot_repo/commit/$cafecito_godot_sha
+Cafecito Godot SDK: https://github.com/$godot_repo/releases/tag/$cafecito_godot_tag
+Source SDK asset SHA-256: $cafecito_godot_asset_sha
 
 - macOS arm64 and x86_64 XCFramework (SHA-256: $mac_checksum)
 - iOS arm64 device and simulator XCFramework (SHA-256: $ios_checksum)

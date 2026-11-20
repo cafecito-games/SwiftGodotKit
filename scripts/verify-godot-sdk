@@ -2,7 +2,7 @@
 set -euo pipefail
 
 if [[ $# -ne 2 ]]; then
-    echo "usage: verify-custom-godot-sdk SDK_DIR LOCK_FILE" >&2
+    echo "usage: verify-godot-sdk SDK_DIR LOCK_FILE" >&2
     exit 2
 fi
 
@@ -20,15 +20,16 @@ fail() {
 jq -e 'type == "object"' "$manifest" >/dev/null || fail "SDK manifest is not a JSON object"
 jq -e 'type == "object"' "$lock_file" >/dev/null || fail "SDK lock is not a JSON object"
 
-expected_custom_commit=$(jq -er '.customGodotCommit | select(test("^[0-9a-f]{40}$"))' "$lock_file") || fail "lock has no full custom-Godot commit"
-expected_godot_commit=$(jq -er '.godotCommit | select(test("^[0-9a-f]{40}$"))' "$lock_file") || fail "lock has no full Godot commit"
+expected_commit=$(jq -er '.cafecitoGodotCommit | select(test("^[0-9a-f]{40}$"))' "$lock_file") || fail "lock has no full Cafecito Godot commit"
 expected_version=$(jq -er '.godotVersion | select(type == "string" and length > 0)' "$lock_file") || fail "lock has no Godot version"
-actual_custom_commit=$(jq -er '.custom_godot_commit | select(test("^[0-9a-f]{7,40}$"))' "$manifest") || fail "manifest has no custom-Godot commit"
+actual_fork_commit=$(jq -er '.cafecito_godot_commit | select(test("^[0-9a-f]{7,40}$"))' "$manifest") || fail "manifest has no Cafecito Godot commit"
 actual_godot_commit=$(jq -er '.godot_commit | select(test("^[0-9a-f]{7,40}$"))' "$manifest") || fail "manifest has no Godot commit"
 actual_version=$(jq -er '.godot_version | select(type == "string" and length > 0)' "$manifest") || fail "manifest has no Godot version"
 
-[[ "$expected_custom_commit" == "$actual_custom_commit"* ]] || fail "custom-Godot commit mismatch: expected $expected_custom_commit, got $actual_custom_commit"
-[[ "$expected_godot_commit" == "$actual_godot_commit"* ]] || fail "Godot commit mismatch: expected $expected_godot_commit, got $actual_godot_commit"
+# The fork packages its own commit under both keys, so an SDK built from an
+# unexpected base reports a Godot commit the lock does not cover.
+[[ "$expected_commit" == "$actual_fork_commit"* ]] || fail "Cafecito Godot commit mismatch: expected $expected_commit, got $actual_fork_commit"
+[[ "$expected_commit" == "$actual_godot_commit"* ]] || fail "Godot commit mismatch: expected $expected_commit, got $actual_godot_commit"
 [[ "$actual_version" == "$expected_version" ]] || fail "Godot version mismatch: expected $expected_version, got $actual_version"
 
 required_files=(
@@ -58,7 +59,7 @@ if find "$sdk_dir" -type l -print -quit | grep -q .; then
     fail "SDK must not contain symbolic links"
 fi
 
-printf 'Custom Godot SDK: %s (%s)\n' "$actual_custom_commit" "$expected_custom_commit"
-printf 'Godot:           %s (%s)\n' "$actual_godot_commit" "$actual_version"
+printf 'Cafecito Godot SDK: %s (%s)\n' "$actual_fork_commit" "$expected_commit"
+printf 'Godot:              %s (%s)\n' "$actual_version" "$(jq -r '.build_name' "$manifest")"
 file_count=$(printf '%s\n' "$actual_files" | awk 'NF { count++ } END { print count + 0 }')
-printf 'Integrity:       %s files verified\n' "$file_count"
+printf 'Integrity:          %s files verified\n' "$file_count"

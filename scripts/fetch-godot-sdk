@@ -2,7 +2,7 @@
 set -euo pipefail
 
 if [[ $# -ne 2 ]]; then
-    echo "usage: fetch-custom-godot-sdk LOCK_FILE OUTPUT_DIR" >&2
+    echo "usage: fetch-godot-sdk LOCK_FILE OUTPUT_DIR" >&2
     exit 2
 fi
 
@@ -15,7 +15,7 @@ repository=$(jq -er '.repository | select(type == "string" and contains("/"))' "
 tag=$(jq -er '.tag | select(type == "string" and length > 0)' "$lock_file")
 asset=$(jq -er '.asset | select(type == "string" and length > 0)' "$lock_file")
 expected_sha=$(jq -er '.sha256 | select(test("^[0-9a-f]{64}$"))' "$lock_file")
-expected_commit=$(jq -er '.customGodotCommit | select(test("^[0-9a-f]{40}$"))' "$lock_file")
+expected_commit=$(jq -er '.cafecitoGodotCommit | select(test("^[0-9a-f]{40}$"))' "$lock_file")
 
 release_commit=$(gh api "repos/$repository/git/ref/tags/$tag" --jq '.object | select(.type == "commit") | .sha')
 [[ "$release_commit" == "$expected_commit" ]] || {
@@ -48,7 +48,7 @@ actual_sha=$(shasum -a 256 "$staging/$asset" | awk '{print $1}')
 
 mkdir "$staging/sdk"
 ditto -x -k "$staging/$asset" "$staging/sdk"
-scripts/verify-custom-godot-sdk "$staging/sdk" "$lock_file"
+scripts/verify-godot-sdk "$staging/sdk" "$lock_file"
 
 if [[ -e "$output_dir" ]]; then
     backup="$output_dir.backup.$$"

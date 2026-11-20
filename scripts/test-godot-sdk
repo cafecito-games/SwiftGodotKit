@@ -22,7 +22,7 @@ for file in "${files[@]}"; do
 done
 
 cat > "$work_dir/lock.json" <<'EOF'
-{"customGodotCommit":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","godotCommit":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","godotVersion":"4.7.2.stable"}
+{"cafecitoGodotCommit":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","godotVersion":"4.7.2.stable"}
 EOF
 
 files_json='{}'
@@ -30,14 +30,14 @@ for file in "${files[@]}"; do
     checksum=$(shasum -a 256 "$sdk/$file" | awk '{print $1}')
     files_json=$(jq -cn --argjson files "$files_json" --arg file "$file" --arg checksum "$checksum" '$files + {($file): $checksum}')
 done
-jq -n --argjson files "$files_json" '{custom_godot_commit:"aaaaaaaaaa",godot_commit:"bbbbbbbbbb",godot_version:"4.7.2.stable",files:$files}' > "$sdk/BUILD_INFO.json"
+jq -n --argjson files "$files_json" '{cafecito_godot_commit:"aaaaaaaaaa",godot_commit:"aaaaaaaaaa",godot_version:"4.7.2.stable",build_name:"cafecito",files:$files}' > "$sdk/BUILD_INFO.json"
 
-scripts/verify-custom-godot-sdk "$sdk" "$work_dir/lock.json" >/dev/null
+scripts/verify-godot-sdk "$sdk" "$work_dir/lock.json" >/dev/null
 
 printf 'tampered\n' >> "$sdk/include/libgodot.h"
-if scripts/verify-custom-godot-sdk "$sdk" "$work_dir/lock.json" >/dev/null 2>&1; then
+if scripts/verify-godot-sdk "$sdk" "$work_dir/lock.json" >/dev/null 2>&1; then
     echo "expected checksum mismatch to fail" >&2
     exit 1
 fi
 
-printf 'custom Godot SDK verification tests passed\n'
+printf 'Cafecito Godot SDK verification tests passed\n'

@@ -92,17 +92,17 @@ if [[ -f "$GODOT_DIR/include/libgodot.h" && -f "$GODOT_DIR/BUILD_INFO.json" ]]; 
 elif [[ -f "$GODOT_DIR/core/extension/libgodot.h" ]]; then
     INPUT_KIND=source
 else
-    echo "error: expected a custom-Godot SDK or source tree at $GODOT_DIR" >&2
+    echo "error: expected a Cafecito Godot SDK or source tree at $GODOT_DIR" >&2
     exit 1
 fi
 
 if [[ "$BUILD_ARTIFACTS" == "1" && "$INPUT_KIND" == "sdk" ]]; then
-    echo "error: --build requires a custom-Godot source tree, not a published SDK" >&2
+    echo "error: --build requires a Cafecito Godot source tree, not a published SDK" >&2
     exit 1
 fi
 
 if [[ "$INPUT_KIND" == "sdk" ]]; then
-    scripts/verify-custom-godot-sdk "$GODOT_DIR" "$SDK_LOCK"
+    scripts/verify-godot-sdk "$GODOT_DIR" "$SDK_LOCK"
 fi
 
 case "$CONFIGURATION" in
@@ -281,7 +281,7 @@ replace_framework() {
 zip_payloads() {
     local mac_zip="$OUTPUT_DIR/mac/libgodot-macos.xcframework.zip"
     local ios_zip="$OUTPUT_DIR/ios/libgodot-ios.xcframework.zip"
-    local repository tag asset sdk_sha custom_godot_commit godot_commit
+    local repository tag asset sdk_sha cafecito_godot_commit
     local mac_sha ios_sha provenance_tmp
 
     if [[ ! -d "$OUTPUT_DIR/mac/libgodot.xcframework" || ! -d "$OUTPUT_DIR/ios/libgodot.xcframework" ]]; then
@@ -298,8 +298,7 @@ zip_payloads() {
         tag=$(jq -er '.tag' "$SDK_LOCK")
         asset=$(jq -er '.asset' "$SDK_LOCK")
         sdk_sha=$(jq -er '.sha256' "$SDK_LOCK")
-        custom_godot_commit=$(jq -er '.customGodotCommit' "$SDK_LOCK")
-        godot_commit=$(jq -er '.godotCommit' "$SDK_LOCK")
+        cafecito_godot_commit=$(jq -er '.cafecitoGodotCommit' "$SDK_LOCK")
         mac_sha=$(swift package compute-checksum "$mac_zip")
         ios_sha=$(swift package compute-checksum "$ios_zip")
         provenance_tmp=$(mktemp "$OUTPUT_DIR/.libgodot-payload-provenance.XXXXXX")
@@ -308,11 +307,10 @@ zip_payloads() {
             --arg tag "$tag" \
             --arg asset "$asset" \
             --arg sdkSha256 "$sdk_sha" \
-            --arg customGodotCommit "$custom_godot_commit" \
-            --arg godotCommit "$godot_commit" \
+            --arg cafecitoGodotCommit "$cafecito_godot_commit" \
             --arg macSha256 "$mac_sha" \
             --arg iosSha256 "$ios_sha" \
-            '{schemaVersion:1,inputKind:"locked-sdk",repository:$repository,tag:$tag,asset:$asset,sdkSha256:$sdkSha256,customGodotCommit:$customGodotCommit,godotCommit:$godotCommit,macSha256:$macSha256,iosSha256:$iosSha256}' \
+            '{schemaVersion:2,inputKind:"locked-sdk",repository:$repository,tag:$tag,asset:$asset,sdkSha256:$sdkSha256,cafecitoGodotCommit:$cafecitoGodotCommit,macSha256:$macSha256,iosSha256:$iosSha256}' \
             > "$provenance_tmp"
         chmod 644 "$provenance_tmp"
         mv "$provenance_tmp" "$OUTPUT_DIR/libgodot-payload-provenance.json"

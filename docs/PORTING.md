@@ -16,15 +16,12 @@ Cafecito SwiftGodot, and Cafecito Godot.
   engine-thread executor.
 - Makefiles were replaced by root and sample Taskfiles.
 - Payload publishing targets `cafecito-games/SwiftGodotKit`, while release
-  notes retain both the custom-Godot orchestrator commit and upstream engine
-  base commit as provenance.
+  notes retain the Cafecito Godot fork commit as provenance.
 - iOS builds use Cafecito Godot's `ios_simulator=yes` SCons option.
-- Apple libgodot payloads are published from custom-Godot release
-  `v4.7.2-20261026.1` and record orchestrator commit
-  `8c7cff31a7cf9412447ee51ff9a6fde8137ae67f` plus Godot base commit
-  `ed1daf0bf001b61586d9930840f2f1394092c079`.
+- Apple libgodot payloads are published from the Cafecito Godot release pinned
+  in `config/libgodot-sdk.json`, and record its fork commit.
 
-## Custom Godot contract
+## Cafecito Godot contract
 
 Godot 4.7.2 already provides:
 
@@ -56,8 +53,8 @@ The reference implementation is the following ordered commit series on
 8. `324455d4e7` — expose embedded display classes in API dumps
 9. `4c95248ac7` — SDL device checks for static iOS libgodot
 
-The port is delivered by Cafecito custom-Godot release
-`v4.7.2-20261026.1`. The historical reference series is retained above to
+The port is delivered by the Cafecito Godot release pinned in
+`config/libgodot-sdk.json`. The historical reference series is retained above to
 explain the runtime contract; Cafecito targets 4.7.2 rather than that branch's
 Godot 4.7.3-rc base.
 
@@ -87,7 +84,7 @@ API so SwiftGodot and engine builds can be validated from the same source.
 - no standalone `app.*.o` object is present; and
 - exact device and simulator architectures are packaged into one XCFramework.
 
-For the locked custom-Godot SDK release, run:
+For the locked Cafecito Godot SDK release, run:
 
 ```sh
 task payload:release

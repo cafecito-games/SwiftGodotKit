@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# Rewrite config/libgodot-sdk.json from a published Cafecito Godot release.
+#
+# The archive checksum comes from the release's own SHA256SUMS.txt, cross-checked
+# against the digest GitHub computed for the asset, and the commit comes from the
+# tag ref, so nothing is typed by hand. Run scripts/fetch-godot-sdk afterwards to
+# download and verify the archive the new lock describes.
+set -euo pipefail
+
+if [[ $# -lt 1 || $# -gt 2 ]]; then
+    echo "usage: scripts/update-godot-sdk-pin TAG [REPOSITORY]" >&2
+    exit 2
+fi
+
+requested_tag=$1
+repository=${2:-cafecito-games/godot}
+asset=${LIBGODOT_SDK_ASSET:-apple-libgodot-release.zip}
+lock_file=${LIBGODOT_SDK_LOCK:-config/libgodot-sdk.json}
+
+fail() {
+    echo "error: $*" >&2
+    exit 1
+}
+
+work_dir=$(mktemp -d)
+trap 'rm -rf "$work_dir"' EXIT
+
+commit=$(gh api "repos/$repository/git/ref/tags/$requested_tag" --jq '.object | select(.type == "commit") | .sha') ||
+    fail "$repository has no tag $requested_tag"
+[[ $commit =~ ^[0-9a-f]{40}$ ]] || fail "tag $requested_tag does not resolve to a commit: $commit"
+
+gh release download "$requested_tag" --repo "$repository" --pattern SHA256SUMS.txt --dir "$work_dir" ||
+    fail "release $requested_tag publishes no SHA256SUMS.txt"
+
+checksum=$(awk -v name="$asset" '$2 == name { print $1 }' "$work_dir/SHA256SUMS.txt" | head -1)
+[[ $checksum =~ ^[0-9a-f]{64}$ ]] || fail "SHA256SUMS.txt records no checksum for $asset"
+
+published_digest=$(gh release view "$requested_tag" --repo "$repository" --json assets \
+    --jq ".assets[] | select(.name == \"$asset\") | .digest")
+[[ "$published_digest" == "sha256:$checksum" ]] ||
+    fail "$asset digest is $published_digest but SHA256SUMS.txt records sha256:$checksum"
+
+release_body=$(gh release view "$requested_tag" --repo "$repository" --json body --jq .body)
+# The backticks below are literal characters in the release notes, not a command substitution.
+# shellcheck disable=SC2016
+godot_version=$(printf '%s\n' "$release_body" | sed -n 's/^- Template Version: `\(.*\)`$/\1/p' | head -1)
+if [[ -z $godot_version ]]; then
+    # Fall back to the tag, which encodes the engine version as v<version>-<date>.<n>.
+    godot_version="${requested_tag#v}"
+    godot_version="${godot_version%%-*}.stable"
+fi
+[[ $godot_version =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[a-z]+$ ]] || fail "unexpected Godot version: $godot_version"
+
+staged_lock="$work_dir/libgodot-sdk.json"
+jq -n \
+    --arg repository "$repository" \
+    --arg tag "$requested_tag" \
+    --arg asset "$asset" \
+    --arg sha256 "$checksum" \
+    --arg cafecitoGodotCommit "$commit" \
+    --arg godotVersion "$godot_version" \
+    '{repository:$repository,tag:$tag,asset:$asset,sha256:$sha256,cafecitoGodotCommit:$cafecitoGodotCommit,godotVersion:$godotVersion}' \
+    > "$staged_lock"
+mv "$staged_lock" "$lock_file"
+
+echo "Pinned $repository@$requested_tag ($commit)"
+echo "Wrote $lock_file"
+echo
+echo "Download and verify the archive this lock describes:"
+echo "  task payload:fetch"
