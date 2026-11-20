@@ -15,8 +15,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/cafecito-games/SwiftGodotBinary",
       "state" : {
-        "revision" : "b23285d01e77c989113c2f0d5bafa463d7d8e6fd",
-        "version" : "0.4.2"
+        "revision" : "a669168070355d8a9e1c14e0fbe9918cd782d995",
+        "version" : "0.6.0"
       }
     }
   ],
