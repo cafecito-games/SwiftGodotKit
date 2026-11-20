@@ -19,9 +19,8 @@ Cafecito SwiftGodot, and Cafecito Godot.
   notes retain the Cafecito Godot fork commit as provenance.
 - iOS builds use Cafecito Godot's `ios_simulator=yes` SCons option.
 - Apple libgodot payloads are published from Cafecito Godot release
-  `v4.7.2-20261026.1` and record orchestrator commit
-  `8c7cff31a7cf9412447ee51ff9a6fde8137ae67f` plus Godot base commit
-  `ed1daf0bf001b61586d9930840f2f1394092c079`.
+  `v4.7.2-20261120.4` and record fork commit
+  `706f49aa1452308086f8c401e3f37daa2b99a313`.
 
 ## Cafecito Godot contract
 
@@ -56,7 +55,7 @@ The reference implementation is the following ordered commit series on
 9. `4c95248ac7` — SDL device checks for static iOS libgodot
 
 The port is delivered by Cafecito Godot release
-`v4.7.2-20261026.1`. The historical reference series is retained above to
+`v4.7.2-20261120.4`. The historical reference series is retained above to
 explain the runtime contract; Cafecito targets 4.7.2 rather than that branch's
 Godot 4.7.3-rc base.
 

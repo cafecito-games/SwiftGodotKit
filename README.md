@@ -9,8 +9,8 @@ It targets these exact binary/runtime inputs:
 
 - [cafecito-games/SwiftGodotBinary](https://github.com/cafecito-games/SwiftGodotBinary)
   v0.4.2, produced by the matching Cafecito SwiftGodot release;
-- [Cafecito Godot v4.7.2-20261026.1](https://github.com/cafecito-games/custom-godot/releases/tag/v4.7.2-20261026.1)
-  with Godot base commit `ed1daf0bf001b61586d9930840f2f1394092c079`; and
+- [Cafecito Godot v4.7.2-20261120.4](https://github.com/cafecito-games/godot/releases/tag/v4.7.2-20261120.4)
+  built from fork commit `706f49aa1452308086f8c401e3f37daa2b99a313`; and
 - Swift 6.3 or later, compiling this package in Swift 5 language mode.
 
 ## Fork status
@@ -21,9 +21,11 @@ fork's consolidated `SwiftGodot` module, and engine-facing APIs are isolated to
 the main actor used by SwiftGodot's engine-thread executor.
 
 SwiftPM downloads both SwiftGodot and libgodot from public, immutable Cafecito
-releases. The libgodot payloads are derived from the checksum-locked custom
-Godot SDK and published in
-[v4.7.2-20261026.1-libgodot.2](https://github.com/cafecito-games/SwiftGodotKit/releases/tag/v4.7.2-20261026.1-libgodot.2).
+releases. The libgodot payloads are derived from the checksum-locked Cafecito
+Godot SDK. `Package.swift` still resolves
+[v4.7.2-20261026.1-libgodot.2](https://github.com/cafecito-games/SwiftGodotKit/releases/tag/v4.7.2-20261026.1-libgodot.2),
+built from the retired `custom-godot` repository; publishing a payload from the
+newly locked SDK rewrites those URLs.
 
 Run the contract check at any time:
 
@@ -220,7 +222,7 @@ To publish the payloads on this repository and rewrite their URLs/checksums in
 `Package.swift`:
 
 ```sh
-task release:publish VERSION=v4.7.2-20261026.1-libgodot.2
+task release:publish VERSION=v4.7.2-20261120.4-libgodot.1
 ```
 
 Use a fresh tag for every payload because SwiftPM caches binary-target URLs.

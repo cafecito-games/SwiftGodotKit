@@ -1,9 +1,8 @@
 {
-  "repository": "cafecito-games/custom-godot",
-  "tag": "v4.7.2-20261026.1",
+  "repository": "cafecito-games/godot",
+  "tag": "v4.7.2-20261120.4",
   "asset": "apple-libgodot-release.zip",
-  "sha256": "6b10472fb36dbdc59e8f40ed3ffc11999bb4b4c85852bbc37a7ff73a6710a89b",
-  "customGodotCommit": "8c7cff31a7cf9412447ee51ff9a6fde8137ae67f",
-  "godotCommit": "ed1daf0bf001b61586d9930840f2f1394092c079",
+  "sha256": "6acd6cb4732fd6e917b30d05e9565ba42edfd29e6e93a399541215c36d182a0b",
+  "cafecitoGodotCommit": "706f49aa1452308086f8c401e3f37daa2b99a313",
   "godotVersion": "4.7.2.stable"
 }
